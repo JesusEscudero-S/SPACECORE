@@ -1,0 +1,6 @@
+# Extras para experimentar (notebooks). NO se instalan en Docker.
+# Solo lo necesita quien vaya a abrir los notebooks de la carpeta notebooks/.
+# Instalar con:  pip install -r requirements-dev.txt
+
+-r requirements.txt
+jupyter

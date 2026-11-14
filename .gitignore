@@ -1,0 +1,25 @@
+# Archivos que NO se suben a GitHub.
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Node / frontend
+node_modules/
+dist/
+
+# Datos y caché (pesan mucho y se pueden volver a descargar)
+cache/
+*.fits
+
+# Secretos y configuración local
+.env
+.env.local
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

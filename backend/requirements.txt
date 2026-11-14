@@ -1,0 +1,25 @@
+# Librerías que necesita el servidor (backend) para funcionar.
+# Instalar con:  pip install -r requirements.txt
+# No agregues librerías nuevas sin avisar al equipo (ver CLAUDE.md).
+# Las versiones están fijas (==) para que todos y Docker instalemos exactamente lo mismo.
+# Probadas con Python 3.13 el 2026-11-14.
+
+# Servidor web
+fastapi==0.163.0
+uvicorn[standard]==0.54.0
+pydantic-settings==2.16.3
+
+# Astronomía y datos
+astropy==8.0.2
+astroquery==0.4.11
+pyvo==1.10.0
+numpy==2.5.4
+reproject==0.21.0
+
+# Imágenes
+pillow==13.0.0
+
+# Descargas y acceso a archivos remotos (IRSA, bucket S3)
+httpx==0.28.1
+fsspec==2026.9.0
+s3fs==2026.9.0
