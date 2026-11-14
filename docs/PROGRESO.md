@@ -8,17 +8,18 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-14 14:30 |
+| Última actualización | 2026-11-14 15:00 |
 | Última persona que trabajó | Jesús (rol #6) |
-| Rama activa | main (solo para el primer commit; desde ahora, una rama por tarea) |
-| Tarea en curso | T03 Repositorio listo |
-| Punto exacto donde quedó | Estructura creada y probada en local, con el primer commit en main. Falta la parte de GitHub. |
-| Siguiente paso concreto | Crear el repo vacío en GitHub, subir main, proteger main e invitar a los 5 compañeros. Luego T02 (aprobar el contrato). |
+| Rama activa | infra/T03-cierre (solo actualiza esta bitácora) |
+| Tarea en curso | T03 Repositorio listo: parte del rol #6 terminada |
+| Punto exacto donde quedó | Repo público en GitHub con main subida y protegida. 5 compañeros invitados: 1 aceptó y 4 invitaciones siguen pendientes. Todavía nadie ha abierto un PR de prueba. |
+| Siguiente paso concreto | Que los 4 compañeros acepten la invitación, clonen y abran un PR de prueba. Después T02 (aprobar el contrato de la API). |
 | ¿El código actual funciona? | Sí: el backend responde /health y el frontend abre con los 4 componentes vacíos. |
 
 ## Tareas terminadas (unidas a main)
 
-- (ninguna todavía)
+- T03 (parte del rol #6): estructura inicial en main, repo en GitHub, main protegida y equipo
+  invitado. Queda completa cuando todos hayan clonado y probado crear una rama y un PR.
 
 ## Decisiones tomadas
 
@@ -50,6 +51,20 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-14 15:00 — Jesús — rama: infra/T03-cierre
+- Hecho: parte de GitHub de T03. Repo público https://github.com/JesusEscudero-S/spacecore,
+  main subida, regla de protección activa en main (requiere Pull Request, no se puede borrar
+  ni forzar push) y 5 compañeros invitados.
+- A medias (y dónde quedó): al momento de revisar, 1 compañero aceptó la invitación y 4 siguen
+  pendientes. No hay ningún PR todavía, así que falta comprobar el criterio de T03 ("todos
+  clonaron y pueden crear ramas y PRs").
+- Siguiente paso: cada compañero acepta la invitación, clona, crea una rama con el prefijo de
+  su rol y abre un PR de prueba. Después T02.
+- Decisiones: la protección de main pide Pull Request pero 0 aprobaciones, para que el
+  integrador (#6) pueda unir sin quedarse bloqueado.
+- Problemas: ninguno nuevo.
+- Cómo probar: `git clone https://github.com/JesusEscudero-S/spacecore.git` y seguir el README.
 
 ### 2026-11-14 14:30 — Jesús — rama: main
 - Hecho: T03 (parte local). Git inicializado con la rama main. Esqueleto del backend (FastAPI con
