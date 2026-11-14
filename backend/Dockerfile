@@ -8,7 +8,8 @@ WORKDIR /app
 
 # Primero solo las dependencias: así Docker las reutiliza si el código cambia.
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# --default-timeout y --retries: para que no falle si la red está lenta.
+RUN pip install --no-cache-dir --default-timeout=120 --retries 10 -r requirements.txt
 
 # Después el código.
 COPY app ./app
