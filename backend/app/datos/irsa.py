@@ -71,44 +71,77 @@ def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> 
 
     Si SPHEREx no tiene imágenes de esa zona, devuelve una lista vacía.
     """
-    # Convertimos a número y validamos antes de consultar.
+    observaciones = buscar_observaciones(ra, dec)
+    return imagenes_de_detector(observaciones, ra, dec, fov_grados, detector)
+
+
+def buscar_observaciones(ra: float, dec: float) -> list[dict]:
+    """Pregunta a IRSA por TODAS las imágenes (los 6 detectores) que cubren el punto (ra, dec).
+
+    Es la única función que habla con IRSA. Devuelve una lista ordenada por fecha; cada
+    elemento es {"url_imagen", "mjd", "detector", "coleccion"}. Solo tiene textos y números,
+    así que se puede guardar tal cual en la caché.
+    """
+    ra = float(ra)
+    dec = float(dec)
+    if not 0 <= ra < 360:
+        raise ValueError(f"RA fuera de rango: {ra}. Debe estar entre 0 y 360 grados.")
+    if not -90 <= dec <= 90:
+        raise ValueError(f"Dec fuera de rango: {dec}. Debe estar entre -90 y 90 grados.")
+
+    centro = SkyCoord(ra, dec, unit="deg", frame="icrs")
+    tabla = _consultar_sia(centro)
+
+    observaciones = []
+    for fila in tabla:
+        # energy_bandpassname viene como "SPHEREx-D2": nos quedamos con "D2".
+        detector = str(fila["energy_bandpassname"]).replace("SPHEREx-", "")
+        if detector not in DETECTORES:
+            continue
+        observaciones.append(
+            {
+                # access_url apunta a la imagen completa (2040 x 2040 píxeles).
+                "url_imagen": str(fila["access_url"]),
+                # t_min es el inicio de la exposición en días (fecha juliana modificada, MJD).
+                "mjd": float(fila["t_min"]),
+                "detector": detector,
+                "coleccion": str(fila["obs_collection"]),
+            }
+        )
+    observaciones.sort(key=lambda observacion: observacion["mjd"])
+    return observaciones
+
+
+def imagenes_de_detector(
+    observaciones: list[dict], ra: float, dec: float, fov_grados: float, detector: str
+) -> list[dict]:
+    """De una lista de observaciones, arma las imágenes de UN detector con su URL de recorte.
+
+    No habla con IRSA: solo filtra y arma direcciones.
+    """
     ra = float(ra)
     dec = float(dec)
     fov_grados = float(fov_grados)
     if detector not in DETECTORES:
         raise ValueError(f"Detector inválido: {detector!r}. Debe ser uno de {DETECTORES}.")
-    if not 0 <= ra < 360:
-        raise ValueError(f"RA fuera de rango: {ra}. Debe estar entre 0 y 360 grados.")
-    if not -90 <= dec <= 90:
-        raise ValueError(f"Dec fuera de rango: {dec}. Debe estar entre -90 y 90 grados.")
     if fov_grados <= 0:
         raise ValueError(f"El campo de visión debe ser mayor que 0: {fov_grados}.")
 
-    centro = SkyCoord(ra, dec, unit="deg", frame="icrs")
-    tabla = _consultar_sia(centro)
-
-    nombre_detector = f"SPHEREx-{detector}"
     imagenes = []
-    for fila in tabla:
-        # SIA devuelve los 6 detectores; nos quedamos con el pedido.
-        if str(fila["energy_bandpassname"]) != nombre_detector:
+    for observacion in observaciones:
+        if observacion["detector"] != detector:
             continue
-        # t_min es el inicio de la exposición en días (fecha juliana modificada, MJD).
-        mjd = float(fila["t_min"])
-        fecha = Time(mjd, format="mjd", scale="utc")
-        # access_url apunta a la imagen completa (2040 x 2040 píxeles). Al agregarle
-        # ?center=...&size=... IRSA devuelve solo el recorte alrededor del punto.
-        url = f"{fila['access_url']}?center={ra},{dec}d&size={fov_grados}"
+        fecha = Time(observacion["mjd"], format="mjd", scale="utc")
         imagenes.append(
             {
-                "url_recorte": url,
+                # Al agregar ?center=...&size=... IRSA devuelve solo el recorte de esa zona.
+                "url_recorte": f"{observacion['url_imagen']}?center={ra},{dec}d&size={fov_grados}",
                 "fecha_obs": fecha.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "mjd": mjd,
+                "mjd": observacion["mjd"],
                 "detector": detector,
-                "coleccion": str(fila["obs_collection"]),
+                "coleccion": observacion["coleccion"],
             }
         )
-
     imagenes.sort(key=lambda imagen: imagen["mjd"])
     return imagenes
 

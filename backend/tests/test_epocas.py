@@ -52,7 +52,7 @@ class PruebasEpocas(unittest.TestCase):
         self.assertEqual(epocas[0]["inicio"], epocas[0]["fin"])
 
     def test_separar_por_detector(self):
-        imagenes = [_imagen(1.0, "D2"), _imagen(2.0, "D5"), _imagen(3.0, "D2")]
+        imagenes = [_imagen(61000.0, "D2"), _imagen(61001.0, "D5"), _imagen(61002.0, "D2")]
         por_detector = separar_por_detector(imagenes)
         self.assertEqual(sorted(por_detector), ["D2", "D5"])
         self.assertEqual(len(por_detector["D2"]), 2)
