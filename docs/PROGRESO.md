@@ -28,10 +28,18 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 - T61, T62 y T63 hechas. La caché de David está en backend/cache (no en git).
 - Variables: `VITE_API_URL` en Vercel (producción) y `CORS_ORIGINS` en Cloud Run
   (infra/cloudrun.env.yaml).
-- PENDIENTE: Redis en producción. La base ya existe en Upstash (GCP us-east4, con eviction);
-  falta guardar su dirección como secreto `spacecore-redis-url` y conectarla al servicio con
-  `gcloud run services update spacecore-api --region us-east4 --update-secrets REDIS_URL=spacecore-redis-url:latest`.
-  La dirección debe empezar con `rediss://` (TLS) y no llevar salto de línea al final.
+- REDIS EN PRODUCCIÓN (hecho, 2026-11-15 12:20): base `spacecore` en Upstash (GCP us-east4,
+  plan gratuito, con eviction). Su dirección está en Secret Manager como `spacecore-redis-url`
+  (empieza con `rediss://`, sin salto de línea al final) y el servicio la recibe como la
+  variable `REDIS_URL`. La cuenta del servicio tiene `roles/secretmanager.secretAccessor`
+  solo sobre ese secreto. Tras conectarlo, los 5 objetivos siguen respondiendo y el registro
+  no muestra avisos de "Redis no respondió". No se comprobó desde Upstash que lleguen datos:
+  ver el contador "Commands" en su consola.
+- OJO: la contraseña de Redis se vio en una captura durante la configuración y Jesús decidió
+  no cambiarla. Si algún día hay que rotarla: Reset Password en Upstash y
+  `gcloud secrets versions add spacecore-redis-url --data-file=<archivo>`.
+- Si se vuelve a aplicar `infra/cloudrun.env.yaml` con `--env-vars-file`, comprobar después
+  que `REDIS_URL` siga conectada (`gcloud run services describe spacecore-api --region us-east4`).
 - Tropiezos, por si se repiten: (1) la cuenta de servicio de Compute no tenía permisos para
   construir; se le dio `roles/run.builder`. (2) Al guardar `VITE_API_URL` desde PowerShell con
   una tubería, se coló un carácter invisible (BOM) y la página pedía todo al lugar equivocado
