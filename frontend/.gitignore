@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel: enlace local del proyecto y variables descargadas (no se suben).
+.vercel
+.env
+.env.local

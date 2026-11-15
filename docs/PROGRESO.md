@@ -16,6 +16,29 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 | Siguiente paso concreto | 1) Revisar y hacer commit de los 5 arreglos de la interfaz de la prueba de las 04:45 (ver historial). 2) Decidir con el equipo: Redis en la nube (Upstash gratis o solo disco) y centrado/actualización de datos (ver "Pendientes por decidir"). 3) README (T74). 4) Desplegar (cuentas de Jesús). 5) PR de `docker` a main. |
 | ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 03:30, computadora de David): 71 pruebas OK; /frames y /spectrum de los 5 objetivos responden en ~30 ms desde la caché. |
 
+## PUBLICADO (2026-11-15 12:30, Jesús con Claude)
+
+- Página: https://spacecore.vercel.app (Vercel, proyecto `spacecore`, conectado a este repo:
+  cada cambio en main se publica solo, usando `vercel.json` de la raíz).
+- Backend: https://spacecore-api-1042355798883.us-east4.run.app (Cloud Run, servicio
+  `spacecore-api`, us-east4, 2 GB, máximo 10 instancias, acceso público).
+- Comprobado en la página publicada: los 5 objetivos cargan en ~1.3 s (D2 o D6 según el
+  objetivo) y dice "API · datos del backend". En el backend, /epocas, /frames y /spectrum de
+  los 5 objetivos responden en ~0.5 s desde la caché que viaja en la imagen.
+- T61, T62 y T63 hechas. La caché de David está en backend/cache (no en git).
+- Variables: `VITE_API_URL` en Vercel (producción) y `CORS_ORIGINS` en Cloud Run
+  (infra/cloudrun.env.yaml).
+- PENDIENTE: Redis en producción. La base ya existe en Upstash (GCP us-east4, con eviction);
+  falta guardar su dirección como secreto `spacecore-redis-url` y conectarla al servicio con
+  `gcloud run services update spacecore-api --region us-east4 --update-secrets REDIS_URL=spacecore-redis-url:latest`.
+  La dirección debe empezar con `rediss://` (TLS) y no llevar salto de línea al final.
+- Tropiezos, por si se repiten: (1) la cuenta de servicio de Compute no tenía permisos para
+  construir; se le dio `roles/run.builder`. (2) Al guardar `VITE_API_URL` desde PowerShell con
+  una tubería, se coló un carácter invisible (BOM) y la página pedía todo al lugar equivocado
+  (404); se corrigió guardándola desde Git Bash con `printf '%s'` y `--force`.
+- Para volver a publicar el backend (si cambia su código o la caché):
+  `gcloud run deploy spacecore-api --source backend --region us-east4 --quiet`.
+
 ## Decididos por Jesús el 2026-11-15 (11:15)
 
 - REDIS: sí va a producción (falta crear la cuenta y poner REDIS_URL en Cloud Run al desplegar).
