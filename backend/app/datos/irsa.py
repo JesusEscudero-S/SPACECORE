@@ -52,13 +52,14 @@ def _consultar_sia(centro: SkyCoord):
             time.sleep(ESPERA_REINTENTO_S * intento)
 
 
-def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> list[dict]:
+def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str | None) -> list[dict]:
     """Busca en IRSA las imágenes de SPHEREx que cubren el punto (ra, dec).
 
     Parámetros:
         ra, dec: coordenadas en grados decimales (ICRS).
         fov_grados: tamaño del recorte que se pedirá, en grados.
-        detector: "D1" a "D6".
+        detector: "D1" a "D6", o None para traer los 6 detectores en una sola consulta
+            (SIA siempre devuelve los 6; así la API no le pregunta 6 veces lo mismo a IRSA).
 
     Devuelve una lista ordenada de la imagen más antigua a la más reciente. Cada elemento es:
         {
@@ -75,7 +76,7 @@ def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> 
     ra = float(ra)
     dec = float(dec)
     fov_grados = float(fov_grados)
-    if detector not in DETECTORES:
+    if detector is not None and detector not in DETECTORES:
         raise ValueError(f"Detector inválido: {detector!r}. Debe ser uno de {DETECTORES}.")
     if not 0 <= ra < 360:
         raise ValueError(f"RA fuera de rango: {ra}. Debe estar entre 0 y 360 grados.")
@@ -87,11 +88,14 @@ def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> 
     centro = SkyCoord(ra, dec, unit="deg", frame="icrs")
     tabla = _consultar_sia(centro)
 
-    nombre_detector = f"SPHEREx-{detector}"
     imagenes = []
     for fila in tabla:
-        # SIA devuelve los 6 detectores; nos quedamos con el pedido.
-        if str(fila["energy_bandpassname"]) != nombre_detector:
+        # SIA devuelve los 6 detectores ("SPHEREx-D1"...); nos quedamos con el pedido.
+        nombre_banda = str(fila["energy_bandpassname"])
+        detector_fila = nombre_banda.replace("SPHEREx-", "")
+        if detector_fila not in DETECTORES:
+            continue
+        if detector is not None and detector_fila != detector:
             continue
         # t_min es el inicio de la exposición en días (fecha juliana modificada, MJD).
         mjd = float(fila["t_min"])
@@ -104,7 +108,7 @@ def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> 
                 "url_recorte": url,
                 "fecha_obs": fecha.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "mjd": mjd,
-                "detector": detector,
+                "detector": detector_fila,
                 "coleccion": str(fila["obs_collection"]),
             }
         )

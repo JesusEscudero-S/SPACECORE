@@ -49,6 +49,7 @@ def a_png(
     vmax: float,
     tamano: int | None = None,
     invertir: bool = False,
+    asinh: bool = True,
 ) -> bytes:
     """Convierte una imagen (matriz 2D) en los bytes de un PNG en escala de grises.
 
@@ -58,6 +59,8 @@ def a_png(
         tamano: si se da, la imagen se agranda o reduce a tamano x tamano píxeles. Con None
             (lo normal) se respeta la escala real: un píxel del PNG = un píxel de SPHEREx.
         invertir: True para fondo blanco y estrellas negras (como WiseView).
+        asinh: True (lo normal) aplica el estiramiento asinh. False deja la escala lineal; se
+            usa en la imagen de diferencia para que "sin cambio" (0) quede en gris medio.
     """
     datos = np.asarray(datos, dtype=float)
     if datos.ndim != 2:
@@ -71,8 +74,9 @@ def a_png(
     # (Usamos ManualInterval + AsinhStretch en vez de ImageNormalize porque esta última
     # necesita matplotlib, que no está en nuestras librerías.)
     intervalo = ManualInterval(vmin=vmin, vmax=vmax)
-    estirar = AsinhStretch()
-    escalado = np.asarray(estirar(intervalo(datos, clip=True)), dtype=float)  # valores 0..1
+    escalado = np.asarray(intervalo(datos, clip=True), dtype=float)  # valores 0..1
+    if asinh:
+        escalado = np.asarray(AsinhStretch()(escalado), dtype=float)
 
     grises = np.round(escalado * 255).astype(np.uint8)
     if invertir:

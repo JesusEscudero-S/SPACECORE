@@ -186,16 +186,20 @@
       <div id="aladin"><div id="aladinMsg" class="hint" style="padding:12px" data-i18n="aladinLoading"></div></div>
       <div class="row"><span style="font-size:12px" data-i18n="baseLayer"></span>
         <select id="aladinSurvey" class="sel" style="width:auto">
-          <option value="https://skies.esac.esa.int/DSSColor">DSS2 (óptico · ESAC)</option>
-          <option value="https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/DSSColor">DSS2 (MAST / AWS)</option>
-          <option value="https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color">DSS2 (IRSA)</option>
-          <option value="https://casda.csiro.au/hips/DSS2/color">DSS2 (CSIRO)</option>
-          <option value="https://skies.esac.esa.int/AllWISEColor">AllWISE (3.4–12 µm · ESAC)</option>
+          <option value="https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color">DSS2 (óptico · IRSA)</option>
+          <option value="https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube">SPHEREx DR1 (λ del panel · IRSA)</option>
+          <option value="https://irsa.ipac.caltech.edu/data/hips/CDS/AllWISE/W1">AllWISE W1 (3.4 µm · IRSA)</option>
           <option value="https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/K">2MASS Ks (2.16 µm · IRSA)</option>
+          <option value="https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/DSSColor">DSS2 (MAST / AWS)</option>
+          <option value="https://casda.csiro.au/hips/DSS2/color">DSS2 (CSIRO)</option>
+          <option value="https://skies.esac.esa.int/DSSColor">DSS2 (ESAC)</option>
         </select></div>
       <div class="row"><span style="font-size:12px">Gaia DR3 <span class="hint" data-i18n="gaiaCat"></span></span>
-        <button id="swGaia" class="sw" role="switch" aria-checked="false" aria-label="Gaia DR3" disabled></button></div>
-      <p id="gaiaNotice" class="hint">Gaia DR3 está desactivado: no se encontró un servidor HiPS no-CDS verificable.</p>
+        <button id="swGaia" class="sw" role="switch" aria-checked="false" aria-label="Gaia DR3"></button></div>
+      <p id="gaiaNotice" class="hint"></p>
+      <div class="row"><span style="font-size:12px">AllWISE <span class="hint" data-i18n="gaiaCat"></span></span>
+        <button id="swWise" class="sw" role="switch" aria-checked="false" aria-label="AllWISE"></button></div>
+      <p id="wiseNotice" class="hint"></p>
     </section>
     <section class="card stack">
       <h2 class="h2" data-i18n="display"></h2>

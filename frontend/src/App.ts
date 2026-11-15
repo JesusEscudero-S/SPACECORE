@@ -116,7 +116,8 @@ const actions: ViewActions = {
       const current = store.getState();
       const epochA = observations.some((entry) => entry.id === current.epochA) ? current.epochA : observations[0].id;
       const epochB = observations.some((entry) => entry.id === current.epochB) ? current.epochB : observations.at(-1)!.id;
-      store.setState({ observations, epochA, epochB, currentIndex: 0, loading: false, error: '' });
+      // loading sigue en true hasta que llegue el primer cuadro (con backend, /frames puede tardar ~1 min).
+      store.setState({ observations, epochA, epochB, currentIndex: 0, loading: true, error: '' });
       await loadFrame(observations[0], sequence);
       if (store.getState().view === 'compare') await loadCompareFrames(sequence);
     } catch (error) {
@@ -176,7 +177,8 @@ const actions: ViewActions = {
 };
 
 function filterObservations(observations: Observation[], state: Readonly<AppState>): Observation[] {
-  const width = state.tolerance === 'inf' ? Infinity : Number(state.tolerance) * channelWidth(state.detector);
+  // Con backend, cada época es la suma de TODO el detector (no hay λ por imagen): el filtro de λ no aplica.
+  const width = state.tolerance === 'inf' || !source.isDemo ? Infinity : Number(state.tolerance) * channelWidth(state.detector);
   return observations.filter((observation) => observation.detector === state.detector && Math.abs(observation.lambda_um - state.lambda) <= width)
     .sort((a, b) => a.mjd - b.mjd);
 }
@@ -270,6 +272,11 @@ async function boot(): Promise<void> {
       if (target) actions.selectTarget(target);
       else if (route.ra === null) store.setState({ error: store.getState().lang === 'es' ? `No se pudo resolver «${route.query}».` : `Could not resolve “${route.query}”.` });
     } catch (error) { store.setState({ error: error instanceof Error ? error.message : String(error) }); }
+  }
+  if (source instanceof ClienteApi && !(await source.salud())) {
+    store.setState({ error: store.getState().lang === 'es'
+      ? `El backend (${initialState.api}) no responde a /health. Revisa que uvicorn esté corriendo.`
+      : `The backend (${initialState.api}) does not answer /health. Check that uvicorn is running.` });
   }
   await actions.refresh();
   if (initialState.view === 'spectrum') await actions.computeSpectrum();
