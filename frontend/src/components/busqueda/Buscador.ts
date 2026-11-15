@@ -1,4 +1,4 @@
-import { COLLECTIONS, DET, detector } from '../../config';
+import { COLLECTIONS, DET, FOV_MAX_ARCMIN, detector } from '../../config';
 import { parseDec, parseRA } from '../../lib/coords';
 import { applyI18n, translate } from '../../lib/i18n';
 import { TARGETS, targetName } from '../../lib/objects';
@@ -28,7 +28,7 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
       const dec = parseDec(decInput.value);
       const input = fovInput.value.trim();
       const fov = Number(input.replace(',', '.'));
-      if (!Number.isFinite(fov) || fov < 1.5 || fov > 40) throw new RangeError('El campo de visión debe estar entre 1.5 y 40 arcmin.');
+      if (!Number.isFinite(fov) || fov < 1.5 || fov > FOV_MAX_ARCMIN) throw new RangeError(`El campo de visión debe estar entre 1.5 y ${FOV_MAX_ARCMIN} arcmin.`);
       actions.applyCoordinates({ ra, dec }, fov, input);
     } catch (error) { showMessage(error instanceof Error ? error.message : String(error), 'warn'); }
   }); else showMessage('[UI] Falta #queryForm; la consulta por coordenadas no está disponible.', 'error');
@@ -94,13 +94,16 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
   document.getElementById('btnRail')?.addEventListener('click', () => document.getElementById('leftRail')?.classList.toggle('collapsed'));
   document.getElementById('btnInsp')?.addEventListener('click', () => document.getElementById('inspector')?.classList.toggle('collapsed'));
 
-  function render(lang: 'es' | 'en'): void {
+  // `centroCambio` = false cuando lo que cambió NO fue el centro (por ejemplo, el usuario está
+  // tecleando el campo de visión): en ese caso no se tocan RA y Dec, para no borrar lo que
+  // acaba de escribir y todavía no ha enviado.
+  function render(lang: 'es' | 'en', centroCambio = true): void {
     const state = store.getState();
     const ra = document.getElementById('inRA') as HTMLInputElement | null;
     const dec = document.getElementById('inDec') as HTMLInputElement | null;
     const fov = document.getElementById('inFov') as HTMLInputElement | null;
-    if (ra && document.activeElement !== ra) ra.value = state.center.ra.toFixed(5);
-    if (dec && document.activeElement !== dec) dec.value = state.center.dec.toFixed(5);
+    if (centroCambio && ra && document.activeElement !== ra) ra.value = state.center.ra.toFixed(5);
+    if (centroCambio && dec && document.activeElement !== dec) dec.value = state.center.dec.toFixed(5);
     if (fov && document.activeElement !== fov) fov.value = state.fovInput;
     const lambdaSlider = document.getElementById('inLam') as HTMLInputElement | null;
     if (lambdaSlider) {
@@ -125,7 +128,7 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
   }
 
   store.subscribe((_state, changed) => {
-    if (['center', 'fovArcmin', 'fovInput', 'detector', 'tolerance', 'lambda', 'collection', 'lang', 'target', 'view'].some((key) => changed.has(key as keyof typeof _state))) render(store.getState().lang);
+    if (['center', 'fovArcmin', 'fovInput', 'detector', 'tolerance', 'lambda', 'collection', 'lang', 'target', 'view'].some((key) => changed.has(key as keyof typeof _state))) render(store.getState().lang, changed.has('center') || changed.has('target'));
   });
   render(store.getState().lang);
 }

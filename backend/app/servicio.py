@@ -74,7 +74,7 @@ def validar_fov(fov: float) -> None:
     """El contrato pide 400 si el campo de visión supera el máximo."""
     if fov > settings.fov_max:
         raise ErrorApi(
-            400, f"El campo de visión máximo es {settings.fov_max} grados; pediste {fov}."
+            400, f"El campo de visión máximo es {settings.fov_max:g} grados; pediste {fov:.3g}."
         )
 
 

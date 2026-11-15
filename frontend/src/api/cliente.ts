@@ -53,10 +53,12 @@ export class ClienteApi implements FrameSource {
 
   constructor(base: string) { this.base = base.replace(/\/$/u, ''); }
 
-  /** ¿Responde el backend? Llama a /health con un límite de 5 s. */
+  /** ¿Responde el backend? Llama a /health con un límite de 25 s.
+   *  (Cloud Run apaga el servidor si nadie lo usa y tarda unos segundos en volver a arrancar:
+   *  con un límite corto, el primer visitante veía un error aunque todo estuviera bien.) */
   async salud(): Promise<boolean> {
     try {
-      const respuesta = await fetch(`${this.base}/health`, { signal: AbortSignal.timeout(5000) });
+      const respuesta = await fetch(`${this.base}/health`, { signal: AbortSignal.timeout(25000) });
       return respuesta.ok;
     } catch { return false; }
   }

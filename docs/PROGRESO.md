@@ -16,6 +16,35 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 | Siguiente paso concreto | 1) Revisar y hacer commit de los 5 arreglos de la interfaz de la prueba de las 04:45 (ver historial). 2) Decidir con el equipo: Redis en la nube (Upstash gratis o solo disco) y centrado/actualización de datos (ver "Pendientes por decidir"). 3) README (T74). 4) Desplegar (cuentas de Jesús). 5) PR de `docker` a main. |
 | ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 03:30, computadora de David): 71 pruebas OK; /frames y /spectrum de los 5 objetivos responden en ~30 ms desde la caché. |
 
+## PRUEBAS DE CALIDAD Y CORRECCIONES (2026-11-15 17:30, Jesús con Claude)
+
+Se probó la página publicada con nombres, coordenadas, datos inválidos y controles. Funciona lo
+principal (los 5 objetivos en ~1.2 s, un objeto nuevo como Vega en ~1 min, formatos decimales y
+sexagesimales, 6 detectores, comparar, espectro, idioma, Gaia, AllWISE, enlace compartido y
+celular). Fallos encontrados y corregidos en la rama `front-ui/T73-correcciones-qa`:
+
+1. La caja de búsqueda no entendía `08h55m10.831s -07d14m42.53s` (el formato del reto para WISE
+   0855). Ahora App.ts reconoce coordenadas en horas/grados con letras o con dos puntos.
+2. Aviso de error al primer visitante por el arranque en frío de Cloud Run. La espera de
+   /health pasó de 5 a 25 s y el mensaje ya no habla de uvicorn. Además Cloud Run tiene
+   `--min-instances 1` (una instancia siempre encendida; CUESTA dinero mientras esté así: al
+   terminar la evaluación, `gcloud run services update spacecore-api --region us-east4 --min-instances 0`).
+3. Al teclear el campo de visión se borraban la RA y Dec recién escritas (Buscador.ts).
+4. La página aceptaba hasta 40' y el backend solo 30'. Ahora el límite es `FOV_MAX_ARCMIN` = 30
+   en frontend/src/config.ts. El mensaje del backend ya no muestra "0.6666666666666666"
+   (ese cambio de servicio.py NO está publicado: falta volver a desplegar el backend).
+5. Los avisos de error o de validación se quedaban arriba aunque la siguiente búsqueda saliera
+   bien. Ahora se quitan al empezar una búsqueda nueva.
+6. El modo para insertar (`?embed=1`) no hacía nada: embed.css estaba vacío. Ahora oculta los
+   paneles laterales y el botón de exportar.
+
+Sin corregir (para el equipo):
+- Solo el campo de visión de 6' está precalculado. Con otro valor, hasta los 5 objetivos van a
+  IRSA (28 s y errores 504 en la prueba con 8').
+- Estrellas muy brillantes (R Draconis en D6, Vega) se ven como un disco blanco enorme.
+- WISE 0855 en Comparar > Diferencia con D6 solo mostró ruido; no se vio el par claro/oscuro.
+- No se probaron: exportar PNG y CSV, copiar enlace, un celular real ni otros navegadores.
+
 ## PUBLICADO (2026-11-15 12:30, Jesús con Claude)
 
 - Página: https://spacecore.vercel.app (Vercel, proyecto `spacecore`, conectado a este repo:

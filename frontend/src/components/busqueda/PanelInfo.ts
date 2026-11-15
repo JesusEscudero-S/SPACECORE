@@ -95,6 +95,10 @@ export function mount(_root: ParentNode, store: Store, _actions: ViewActions): v
     if (state.error && banner) {
       const text = document.getElementById('bannerText'); if (text) text.textContent = state.error;
       banner.className = 'banner err'; banner.hidden = false;
+      banner.dataset.origen = 'estado';
+    } else if (banner && banner.dataset.origen === 'estado') {
+      // El error ya se resolvió (por ejemplo, la siguiente búsqueda salió bien): se quita el aviso.
+      banner.hidden = true; delete banner.dataset.origen;
     }
     const centerNote = document.getElementById('centerNote');
     if (centerNote) centerNote.textContent = state.target && state.target.pmra !== 0 && !state.api
