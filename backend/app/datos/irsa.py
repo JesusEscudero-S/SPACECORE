@@ -13,18 +13,43 @@ Para probar a mano (desde la carpeta backend, con el entorno .venv activado):
     python -m app.datos.irsa
 """
 
+import logging
+import time
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
 from astroquery.ipac.irsa import Irsa
+from pyvo.dal.exceptions import DALServiceError
 
 from app.config import settings
+
+registro = logging.getLogger(__name__)
 
 DETECTORES = ("D1", "D2", "D3", "D4", "D5", "D6")
 
 # Radio de búsqueda alrededor del punto. Con 1 segundo de arco (el valor del tutorial oficial)
 # obtenemos las imágenes que contienen el punto.
 RADIO_BUSQUEDA = 1 * u.arcsec
+
+# IRSA a veces responde "502 Proxy Error" y al volver a preguntar funciona. Por eso reintentamos.
+INTENTOS = 3
+ESPERA_REINTENTO_S = 3
+
+
+def _consultar_sia(centro: SkyCoord):
+    """Pregunta al servicio SIA de IRSA, reintentando si el servidor falla."""
+    for intento in range(1, INTENTOS + 1):
+        try:
+            return Irsa.query_sia(
+                pos=(centro, RADIO_BUSQUEDA),
+                collection=settings.lista_colecciones_spherex,
+            )
+        except (DALServiceError, OSError) as error:
+            registro.warning("Consulta a IRSA: intento %s de %s falló: %r", intento, INTENTOS, error)
+            if intento == INTENTOS:
+                raise
+            time.sleep(ESPERA_REINTENTO_S * intento)
 
 
 def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> list[dict]:
@@ -60,10 +85,7 @@ def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> 
         raise ValueError(f"El campo de visión debe ser mayor que 0: {fov_grados}.")
 
     centro = SkyCoord(ra, dec, unit="deg", frame="icrs")
-    tabla = Irsa.query_sia(
-        pos=(centro, RADIO_BUSQUEDA),
-        collection=settings.lista_colecciones_spherex,
-    )
+    tabla = _consultar_sia(centro)
 
     nombre_detector = f"SPHEREx-{detector}"
     imagenes = []
@@ -93,8 +115,7 @@ def buscar_imagenes(ra: float, dec: float, fov_grados: float, detector: str) -> 
 
 if __name__ == "__main__":
     # Prueba manual con Barnard's Star (coordenadas aproximadas).
-    import time
-
+    logging.basicConfig(level=logging.WARNING)
     inicio = time.time()
     resultado = buscar_imagenes(ra=269.4521, dec=4.6934, fov_grados=0.1, detector="D2")
     print(f"Imágenes encontradas: {len(resultado)} (en {time.time() - inicio:.1f} s)")
