@@ -13,6 +13,7 @@ from astropy.wcs import WCS
 from app.ciencia.alinear import (
     alinear,
     malla_objetivo,
+    rellenar_huecos,
     restar_fondo,
     sumar_epoca,
     tamano_malla,
@@ -108,6 +109,19 @@ class PruebasSumar(unittest.TestCase):
     def test_sin_imagenes_da_error(self):
         with self.assertRaises(ValueError):
             sumar_epoca([])
+
+
+class PruebasRellenar(unittest.TestCase):
+    def test_centro_saturado_queda_brillante(self):
+        imagen = np.zeros((5, 5))
+        imagen[1:4, 1:4] = 50.0
+        imagen[2, 2] = np.nan  # centro de la estrella sin dato
+        self.assertEqual(rellenar_huecos(imagen)[2, 2], 50.0)
+
+    def test_sin_vecinos_con_dato_sigue_nan(self):
+        imagen = np.full((9, 9), np.nan)
+        imagen[0, 0] = 1.0
+        self.assertTrue(np.isnan(rellenar_huecos(imagen, pasadas=2)[8, 8]))
 
 
 if __name__ == "__main__":

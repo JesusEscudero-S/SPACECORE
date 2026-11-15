@@ -76,6 +76,27 @@ export function capaSpherex(lambdaUm: number): number {
   return mejor;
 }
 
+// em_min y em_max (metros) del archivo properties del cubo de SPHEREx.
+const SPHEREX_EM_MIN = 7.43e-7;
+const SPHEREX_EM_MAX = 5.009e-6;
+const VELOCIDAD_LUZ = 299_792_458;
+
+/**
+ * Número que hay que pasarle a setSliceNumber() de Aladin para que muestre la capa `capa`.
+ *
+ * Comprobado el 2026-11-14 en el navegador: Aladin convierte el número en una longitud de onda
+ * (reparto lineal entre em_min y em_max), la pasa a FRECUENCIA y elige la capa con un reparto
+ * lineal en frecuencia. Por eso setSliceNumber(capa) NO muestra esa capa (con D6 mostraba la capa
+ * 1, que es de 0.77 µm). Aquí hacemos la cuenta al revés, apuntando al centro de la capa.
+ */
+export function numeroParaAladin(capa: number, total = SPHEREX_LAMBDAS.length): number {
+  const fMin = VELOCIDAD_LUZ / SPHEREX_EM_MAX;
+  const fMax = VELOCIDAD_LUZ / SPHEREX_EM_MIN;
+  const frecuencia = fMin + ((capa + 0.5) / total) * (fMax - fMin);
+  const lambda = VELOCIDAD_LUZ / frecuencia;
+  return ((lambda - SPHEREX_EM_MIN) / (SPHEREX_EM_MAX - SPHEREX_EM_MIN)) * total;
+}
+
 /** URL de VizieR (espejo CfA) para un cono alrededor del centro. */
 export function urlVizier(def: CatalogoDef, centro: SkyPosition, radioArcsec: number): string {
   const params = new URLSearchParams({
@@ -158,7 +179,7 @@ export function mount(_root: ParentNode, store: Store, _actions: ViewActions): v
   // Si el fondo es el cubo de SPHEREx, muestra la capa de la longitud de onda elegida en el panel.
   function sincronizarCapaSpherex(): void {
     if (!fondoEsSpherex || !capaFondo?.setSliceNumber) return;
-    try { capaFondo.setSliceNumber(capaSpherex(store.getState().lambda)); } catch (error) { console.warn('[aladinContext] No se pudo cambiar la capa de SPHEREx.', error); }
+    try { capaFondo.setSliceNumber(numeroParaAladin(capaSpherex(store.getState().lambda))); } catch (error) { console.warn('[aladinContext] No se pudo cambiar la capa de SPHEREx.', error); }
   }
 
   function applySurvey(url: string): void {

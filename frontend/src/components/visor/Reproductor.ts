@@ -127,7 +127,7 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
       context.drawImage(rendered, x, y, imageWidth, imageWidth);
     } else {
       context.fillStyle = '#b4bcc8'; context.font = '13px Inter, sans-serif'; context.textAlign = 'center';
-      context.fillText(state.loading ? (state.lang === 'es' ? 'Cargando cuadros…' : 'Loading frames…') : (state.lang === 'es' ? 'Sin cuadros para mostrar' : 'No frames available'), width / 2, height / 2);
+      context.fillText(state.loading ? (state.lang === 'es' ? (state.api ? 'Cargando imágenes de SPHEREx… (la primera vez ~1 min)' : 'Cargando cuadros…') : (state.api ? 'Loading SPHEREx images… (first time ~1 min)' : 'Loading frames…')) : (state.lang === 'es' ? 'Sin cuadros para mostrar' : 'No frames available'), width / 2, height / 2);
     }
     if (state.display.grid) drawGrid(context, width, height);
     if (state.display.marker && state.target) drawExpected(context, state.target, state.center, state.fovArcmin, width, height, state.frame?.observation.mjd);

@@ -25,7 +25,13 @@ from astropy.coordinates.name_resolve import NameResolveError
 from pyvo.dal.exceptions import DALServiceError
 
 from app import mock
-from app.ciencia.alinear import ESCALA_ARCSEC_PX, alinear_recorte, malla_objetivo, sumar_epoca
+from app.ciencia.alinear import (
+    ESCALA_ARCSEC_PX,
+    alinear_recorte,
+    malla_objetivo,
+    rellenar_huecos,
+    sumar_epoca,
+)
 from app.ciencia.imagen import a_data_url, a_png, limites_brillo
 from app.config import settings
 from app.datos import cache
@@ -179,7 +185,8 @@ def _calcular_pila(ra: float, dec: float, fov: float, lista: list[dict]) -> tupl
     wcs_malla, forma = malla_objetivo(ra, dec, fov)
 
     urls = [imagen["url_recorte"] for e in lista for imagen in e["imagenes"]]
-    recortes = asyncio.run(descargar_recortes(urls))
+    # 4 descargas a la vez: con 8, IRSA respondía "503 Service Unavailable" seguido (2026-11-14).
+    recortes = asyncio.run(descargar_recortes(urls, max_concurrentes=4))
     completo = all(r is not None for r in recortes)
 
     pila = []
@@ -247,7 +254,11 @@ def frames(ra: float, dec: float, fov: float, det: str) -> dict:
     lista, pila = pila_de_epocas(ra, dec, fov, det)
     vmin, vmax = limites_brillo(list(pila))
     cuadros = [
-        {"epoca": e["id"], "fecha": e["fecha"], "png": a_data_url(a_png(imagen, vmin, vmax))}
+        {
+            "epoca": e["id"],
+            "fecha": e["fecha"],
+            "png": a_data_url(a_png(rellenar_huecos(imagen), vmin, vmax)),
+        }
         for e, imagen in zip(lista, pila)
     ]
     return {"frames": cuadros, "meta": _meta(ra, dec, fov, det, pila.shape[-1])}

@@ -114,3 +114,29 @@ def sumar_epoca(alineadas: list[np.ndarray]) -> np.ndarray:
         # nanmedian avisa "All-NaN slice" en píxeles sin ningún dato: es lo esperado.
         warnings.simplefilter("ignore", RuntimeWarning)
         return np.nanmedian(pila, axis=0)
+
+
+def rellenar_huecos(datos: np.ndarray, pasadas: int = 3) -> np.ndarray:
+    """Rellena píxeles sin dato (NaN) con el valor MÁXIMO de sus vecinos. Solo para mostrar.
+
+    Por qué: el centro de una estrella muy brillante (como Barnard's Star) satura el detector y
+    SPHEREx lo marca sin dato. En el PNG quedaba un punto negro en medio de la estrella. Con el
+    máximo de los vecinos, el centro se ve blanco, como corresponde. Huecos grandes (bordes sin
+    cobertura) se rellenan solo `pasadas` píxeles hacia adentro; el resto sigue como NaN.
+    """
+    resultado = np.array(datos, dtype=float, copy=True)
+    for _ in range(pasadas):
+        huecos = ~np.isfinite(resultado)
+        if not huecos.any():
+            break
+        relleno = np.pad(resultado, 1, constant_values=np.nan)
+        alto, ancho = resultado.shape
+        vecinos = np.stack(
+            [relleno[1 + dy : 1 + dy + alto, 1 + dx : 1 + dx + ancho]
+             for dy in (-1, 0, 1) for dx in (-1, 0, 1) if (dy, dx) != (0, 0)]
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # "All-NaN slice": se queda NaN
+            maximo = np.nanmax(vecinos, axis=0)
+        resultado[huecos] = maximo[huecos]
+    return resultado

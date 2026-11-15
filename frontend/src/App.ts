@@ -116,7 +116,8 @@ const actions: ViewActions = {
       const current = store.getState();
       const epochA = observations.some((entry) => entry.id === current.epochA) ? current.epochA : observations[0].id;
       const epochB = observations.some((entry) => entry.id === current.epochB) ? current.epochB : observations.at(-1)!.id;
-      store.setState({ observations, epochA, epochB, currentIndex: 0, loading: false, error: '' });
+      // loading sigue en true hasta que llegue el primer cuadro (con backend, /frames puede tardar ~1 min).
+      store.setState({ observations, epochA, epochB, currentIndex: 0, loading: true, error: '' });
       await loadFrame(observations[0], sequence);
       if (store.getState().view === 'compare') await loadCompareFrames(sequence);
     } catch (error) {

@@ -74,7 +74,7 @@ def _buscar_falso(ra, dec, fov, detector=None):
     return imagenes
 
 
-async def _descargar_falso(urls):
+async def _descargar_falso(urls, **_opciones):
     return [_recorte_falso(int(url.split("/")[2])) for url in urls]
 
 

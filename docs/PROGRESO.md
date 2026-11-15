@@ -8,13 +8,13 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-15 00:00 |
+| Última actualización | 2026-11-15 00:20 |
 | Última persona que trabajó | Juan (con Claude, sesión en la nube) |
 | Rama activa | api/T22-T34-mvp-backend (4 commits encima de main; ver el historial) |
 | Tarea en curso | Backend del MVP terminado (T22, T23, T31, T32, T33, T34, T35, T37, T16) y conectado a la página; falta probarlo con datos REALES de IRSA |
 | Punto exacto donde quedó | Todo pasa con IRSA simulado (48 pruebas) y la página funciona contra el backend en modo mock. Desde la sesión de Claude no se pudo llegar a IRSA (red bloqueada), así que NUNCA se corrió con recortes reales. |
 | Siguiente paso concreto | 1) En una computadora del equipo: `python -m unittest discover -v` y luego `python -m scripts.precalcular --objetivos barnard --detectores D2`, y revisar que las imágenes tengan sentido (ver "Cómo probar" de la entrada de hoy). 2) Unir el PR. 3) T61, T62, T63 (publicar). 4) Decidir cómo llevar la caché precalculada a Cloud Run (T14). |
-| ¿El código actual funciona? | Sí con datos simulados: 48 pruebas OK, `npm run typecheck` y `npm run build` OK, la página carga las épocas y los cuadros del backend en modo mock. Con datos reales: SIN PROBAR. |
+| ¿El código actual funciona? | SÍ, CON DATOS REALES (2026-11-15 00:00, computadora de Juan, Python 3.14.6 de Anaconda): Barnard's Star D2 dio 3 épocas (18, 18 y 25 imágenes) y la página las anima con `?api=http://127.0.0.1:8000`. 50 pruebas OK. |
 
 ## Tareas terminadas (unidas a main)
 
@@ -168,6 +168,25 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-15 00:20 — Juan (con Claude) — rama: api/T22-T34-mvp-backend
+- Hecho: PRIMERA PRUEBA CON DATOS REALES, exitosa. La primera búsqueda de Barnard tardó 25 s
+  (algunas descargas dieron "503 Service Unavailable" de IRSA y se reintentaron); la segunda,
+  0 s desde la caché. Arreglos tras verlo en la página:
+  - El centro de estrellas muy brillantes salía con un punto NEGRO (píxeles saturados que
+    SPHEREx marca sin dato). `rellenar_huecos` (ciencia/alinear.py) los rellena con el máximo
+    de sus vecinos, solo para el PNG.
+  - Descargas: 4 a la vez en lugar de 8, para que IRSA responda menos "503".
+  - La página decía "Sin cuadros para mostrar" mientras /frames calculaba (~40 s la primera
+    vez). Ahora dice "Cargando imágenes de SPHEREx… (la primera vez ~1 min)".
+  - Aladin: el fondo SPHEREx mostraba otra longitud de onda (Aladin reparte las capas del cubo
+    por FRECUENCIA). `numeroParaAladin` corrige la cuenta; comprobado: D1->capa 8, D3->42, D6->94.
+- Pendiente: /spectrum (T36) no existe todavía (la vista "Espectro" muestra "No existe esa
+  dirección"). El fondo SPHEREx de Aladin se ve saturado (falta ajustar cortes de brillo).
+- Cómo correrlo en Windows sin comandos: en la carpeta de Juan hay `iniciar-spacecore.bat`
+  (página) e `iniciar-backend.bat` (backend; crea .venv, instala, prueba Barnard y enciende
+  uvicorn). Abrir http://localhost:5173/?api=http://127.0.0.1:8000 con las dos ventanas abiertas.
+
 
 ### 2026-11-15 00:00 — Juan (con Claude, sesión en la nube) — rama: api/T22-T34-mvp-backend
 - Hecho: T51 completa (Aladin con Gaia DR3 y AllWISE superpuestos, fondo SPHEREx DR1 y retícula
