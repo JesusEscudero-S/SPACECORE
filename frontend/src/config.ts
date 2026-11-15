@@ -6,6 +6,9 @@ export const COLLECTION = 'spherex_dr1';
 export const API_BASE = new URLSearchParams(location.search).get('api') || import.meta.env.VITE_API_URL || null;
 // Tamaño de píxel de SPHEREx: 6.15″ (columna s_pixel_scale del servicio SIA de IRSA, 2026-11-14).
 export const PIX_ARCSEC = 6.15;
+// Fecha FIJA (año decimal) en la que se centran los objetivos con movimiento propio.
+// Debe ser IGUAL a EPOCA_CENTRADO de backend/scripts/precalcular.py (ver App.ts).
+export const EPOCA_CENTRADO = 2026;
 export const CHANNELS_PER_DETECTOR = 17;
 export const COLLECTIONS = [COLLECTION, 'spherex_qr3'] as const;
 export const EXPLANATORY_SUPPLEMENT = 'https://irsa.ipac.caltech.edu/data/SPHEREx/docs/SPHEREx_Expsupp_QR.pdf';

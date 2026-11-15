@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:5173 y debes ver la interfaz "Planet X · SPHEREx" con la Estrella de Barnard
+Abre http://localhost:5173 y debes ver la interfaz "SPACECORE · SPHEREx" con la Estrella de Barnard
 en modo demostración (datos simulados). Para conectarla al backend, ver `frontend/README.md`.
 
 ## Carpetas

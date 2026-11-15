@@ -228,7 +228,7 @@ longitud de onda distinta), medido con fotometría de apertura.
 | `anillo_in`, `anillo_out` | número, opcional | Radios del anillo de fondo en arcsec. Por defecto 30 y 50. Máximo 60. |
 | `fondo` | `true`/`false`, opcional | Restar el fondo (mediana del anillo). Por defecto `true`. |
 | `pmra`, `pmdec` | número, opcional | Movimiento propio en mas/año (`pmra` ya multiplicado por cos(Dec), como SIMBAD). |
-| `epoca` | número, opcional | Año decimal al que corresponden `ra` y `dec` (la página usa el 1 de enero del año en curso). Con `pmra`/`pmdec`, la apertura se coloca donde estaba la estrella en la fecha de cada imagen. |
+| `epoca` | número, opcional | Año decimal al que corresponden `ra` y `dec` (la página usa siempre 2026, una fecha fija). Con `pmra`/`pmdec`, la apertura se coloca donde estaba la estrella en la fecha de cada imagen. |
 
 Ejemplo: `GET /spectrum?ra=269.4463&dec=4.7680&pmra=-798.6&pmdec=10328.1&epoca=2026`
 

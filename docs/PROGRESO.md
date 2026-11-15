@@ -16,7 +16,22 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 | Siguiente paso concreto | 1) Revisar y hacer commit de los 5 arreglos de la interfaz de la prueba de las 04:45 (ver historial). 2) Decidir con el equipo: Redis en la nube (Upstash gratis o solo disco) y centrado/actualización de datos (ver "Pendientes por decidir"). 3) README (T74). 4) Desplegar (cuentas de Jesús). 5) PR de `docker` a main. |
 | ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 03:30, computadora de David): 71 pruebas OK; /frames y /spectrum de los 5 objetivos responden en ~30 ms desde la caché. |
 
-## Pendientes por decidir con el equipo (David, 2026-11-15 04:00)
+## Decididos por Jesús el 2026-11-15 (11:15)
+
+- REDIS: sí va a producción (falta crear la cuenta y poner REDIS_URL en Cloud Run al desplegar).
+- CENTRADO: fijo en 2026.0. Constante EPOCA_CENTRADO en frontend/src/config.ts y en
+  backend/scripts/precalcular.py (deben ser iguales). Ya no depende del año en curso.
+- MARGEN DEL RECORTE: se queda como está (recorte del mismo tamaño que el campo de visión).
+- NOMBRE: la interfaz se llama SPACECORE (antes decía "Planet X").
+- CACHÉ PRECALCULADA: la de David se copió a backend/cache de la computadora de Jesús y se
+  validó con `python -m scripts.precalcular`: los 5 objetivos (6 detectores + espectro) salen
+  en 0 s. No está en git; hay que tenerla en backend/cache al construir la imagen.
+- Estado de ramas: PR #11 (rama docker) y PR #12 (captura) unidos a main; PR #10 cerrado sin
+  unir por duplicado.
+- Visto al probar: R Draconis en D6 se ve como un disco blanco enorme (estrella muy brillante,
+  saturada). Conviene abrirla en otro detector para la demo.
+
+## Pendientes por decidir con el equipo (David, 2026-11-15 04:00) — YA RESUELTOS, ver arriba
 
 - REDIS EN PRODUCCIÓN: hoy Cloud Run usaría solo el disco (los 5 objetivos vienen en la
   imagen). Opción: Upstash gratis (256 MB, 500 mil comandos/mes); solo hay que poner

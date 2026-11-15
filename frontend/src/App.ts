@@ -1,8 +1,8 @@
-import { API_BASE, COLLECTION, DET, channelWidth, detector } from './config';
+import { API_BASE, COLLECTION, DET, EPOCA_CENTRADO, channelWidth, detector } from './config';
 import { ClienteApi } from './api/cliente';
 import { DemoSource } from './api/demoSource';
 import type { FrameSource, Observation, SkyPosition, Target, ViewName } from './api/source';
-import { currentDecimalYear, posicionEspectro, propagarProperMotion } from './lib/coords';
+import { posicionEspectro, propagarProperMotion } from './lib/coords';
 import { download, showMessage, verifyElements } from './lib/dom';
 import { applyI18n } from './lib/i18n';
 import { localResolve, TARGETS } from './lib/objects';
@@ -19,11 +19,11 @@ import { mount as mountBuscador } from './components/busqueda/Buscador';
 import { mount as mountReproductor } from './components/visor/Reproductor';
 import { mount as mountEspectro } from './components/visor/Espectro';
 
-// Los objetivos se centran en su posición al 1 de enero del año en curso, no en la de "hoy":
-// así las coordenadas no cambian cada día y lo precalculado en la caché del backend sirve todo
-// el año. Barnard, la más rápida, se mueve menos de 11″ en un año: en un campo de 6′ no se nota.
-// backend/scripts/precalcular.py usa EXACTAMENTE esta misma regla: si cambias una, cambia la otra.
-function epocaDeCentrado(): number { return Math.floor(currentDecimalYear()); }
+// Los objetivos se centran en su posición en una fecha FIJA (EPOCA_CENTRADO, en config.ts), no
+// en la de "hoy": así las coordenadas no cambian nunca y lo precalculado en la caché del backend
+// no caduca. Barnard, la más rápida, se mueve menos de 11″ en un año: en un campo de 6′ no se nota.
+// backend/scripts/precalcular.py usa EXACTAMENTE el mismo valor: si cambias uno, cambia el otro.
+function epocaDeCentrado(): number { return EPOCA_CENTRADO; }
 
 const route = readUrlState();
 const queryTarget = TARGETS.find((target) => target.key === route.query) ?? localResolve(route.query);
