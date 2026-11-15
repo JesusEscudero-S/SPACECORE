@@ -8,13 +8,25 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-15 00:20 |
-| Última persona que trabajó | Juan (con Claude, sesión en la nube) |
-| Rama activa | api/T22-T34-mvp-backend (4 commits encima de main; ver el historial) |
-| Tarea en curso | Backend del MVP terminado (T22, T23, T31, T32, T33, T34, T35, T37, T16) y conectado a la página; falta probarlo con datos REALES de IRSA |
-| Punto exacto donde quedó | Todo pasa con IRSA simulado (48 pruebas) y la página funciona contra el backend en modo mock. Desde la sesión de Claude no se pudo llegar a IRSA (red bloqueada), así que NUNCA se corrió con recortes reales. |
-| Siguiente paso concreto | 1) En una computadora del equipo: `python -m unittest discover -v` y luego `python -m scripts.precalcular --objetivos barnard --detectores D2`, y revisar que las imágenes tengan sentido (ver "Cómo probar" de la entrada de hoy). 2) Unir el PR. 3) T61, T62, T63 (publicar). 4) Decidir cómo llevar la caché precalculada a Cloud Run (T14). |
-| ¿El código actual funciona? | SÍ, CON DATOS REALES (2026-11-15 00:00, computadora de Juan, Python 3.14.6 de Anaconda): Barnard's Star D2 dio 3 épocas (18, 18 y 25 imágenes) y la página las anima con `?api=http://127.0.0.1:8000`. 50 pruebas OK. |
+| Última actualización | 2026-11-15 03:40 |
+| Última persona que trabajó | David (con Claude) |
+| Rama activa | docker (subida a GitHub; 3 commits encima de main con el de esta sesión) |
+| Tarea en curso | T36 /spectrum terminado con datos reales. Despliegue (T61/T62/T63) en espera de las cuentas de Jesús. |
+| Punto exacto donde quedó | Todo corre con `docker compose up -d --build`. Los 5 objetivos (6 detectores + espectro) están precalculados en backend/cache. La pestaña Espectro ya se ve y carga sola al cambiar de objetivo. |
+| Siguiente paso concreto | 1) Revisar y hacer commit de los 5 arreglos de la interfaz de la prueba de las 04:45 (ver historial). 2) Decidir con el equipo: Redis en la nube (Upstash gratis o solo disco) y centrado/actualización de datos (ver "Pendientes por decidir"). 3) README (T74). 4) Desplegar (cuentas de Jesús). 5) PR de `docker` a main. |
+| ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 03:30, computadora de David): 71 pruebas OK; /frames y /spectrum de los 5 objetivos responden en ~30 ms desde la caché. |
+
+## Pendientes por decidir con el equipo (David, 2026-11-15 04:00)
+
+- REDIS EN PRODUCCIÓN: hoy Cloud Run usaría solo el disco (los 5 objetivos vienen en la
+  imagen). Opción: Upstash gratis (256 MB, 500 mil comandos/mes); solo hay que poner
+  REDIS_URL como variable secreta en Cloud Run. Sirve para que las búsquedas NUEVAS del
+  jurado queden guardadas 7 días aunque Cloud Run apague el servidor.
+- CENTRADO Y DATOS NUEVOS: con el centrado al 1 de enero, después del 1-ene-2027 Barnard,
+  Eps Indi B y WISE 0855 dejan de salir de la caché (finalistas: finales de enero). Propuesta:
+  centrado fijo en 2026.0 + revisar la lista de IRSA cada 24 h y recalcular en segundo plano
+  si hay imágenes nuevas (cumple "fácil de actualizar con datos nuevos" del reto). Volver al
+  centrado diario del equipo es peor: la caché caduca cada 2 a 4 semanas.
 
 ## Tareas terminadas (unidas a main)
 
@@ -32,6 +44,36 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 ## Decisiones tomadas
 
+- (2026-11-15 03:00, David) /spectrum (T36): un punto por imagen (cada píxel de SPHEREx ve otra
+  longitud de onda). La tabla WCS-WAVE es IDÉNTICA en todos los recortes de un detector y
+  versión de proceso (verificado con datos reales); solo cambia CRPIX1W/2W en la cabecera. Por
+  eso se baja una vez por detector y de cada imagen solo un recorte de 0.035° (~80 KB). Se
+  guardan las "estampillas" (IMAGE + VARIANCE) en la caché y la fotometría se calcula al vuelo:
+  cambiar la apertura o el anillo no descarga nada. Máximo 40 imágenes por detector. Flujo en
+  mJy (BUNIT MJy/sr × área del píxel). La apertura sigue el movimiento propio (pmra, pmdec,
+  epoca). Fotometría de apertura simple, sin corrección por PSF.
+- (2026-11-15 03:30, David) "Excluir píxeles marcados" queda APAGADO por defecto: en Barnard
+  (D1–D4) y R Draconis (todo) el centro satura y con el filtro no se ve casi nada. Los puntos
+  saturados se dibujan como círculos huecos (flujo por debajo del real).
+
+- (2026-11-15 madrugada, David) DOCKER PARA TODO EL EQUIPO: `docker-compose.yml` en la raíz
+  levanta Redis, backend (puerto 8000, con --reload) y frontend (5173) con un solo comando.
+  Quien prefiera Windows sin Docker sigue igual: no se cambió ningún comando del equipo.
+  Detalle de Windows: el contenedor no se entera cuando editas un archivo, así que Vite usa
+  "polling" (DOCKER_POLLING=1, ver vite.config.ts) y uvicorn WATCHFILES_FORCE_POLLING.
+- (2026-11-15 madrugada, David) CACHÉ EN REDIS + DISCO (T14, parcial): cache.py guarda en los
+  dos y lee primero de Redis (7 días de vida por clave). Si REDIS_URL está vacía o Redis no
+  responde, usa solo el disco sin error: así Cloud Run y Windows sin Docker funcionan igual.
+  Las pruebas apagan Redis en tests/__init__.py para no contaminar la caché real con imágenes
+  falsas. Librería nueva: redis==8.1.0.
+- (2026-11-15 madrugada, David) CENTRADO AL 1 DE ENERO: la página (App.ts, `epocaDeCentrado`)
+  y precalcular.py mueven los objetivos por su movimiento propio hasta el 1 de enero del año
+  en curso, no hasta "hoy". Antes la posición cambiaba cada día y la caché precalculada dejaba
+  de servir (incluida la evaluación de diciembre). Barnard se mueve < 11″ al año: no se nota
+  en un campo de 6′. tests/test_precalcular.py fija las coordenadas que calcula la página.
+- (2026-11-15 madrugada, David) LA CACHÉ VIAJA EN LA IMAGEN DE PRODUCCIÓN: `backend/Dockerfile`
+  copia `cache/` (solo tiene sentido después de correr precalcular.py). Cloud Run arranca con
+  los 5 objetivos listos aunque IRSA esté caído. Hay que volver a publicar si cambia la caché.
 - (2026-11-14 noche) ALADIN SIN CDS NI ESAC: se probó desde la red del equipo (navegador del
   desktop app, con CORS) qué servidores responden:
   | Servicio | Resultado |
@@ -168,6 +210,63 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-15 04:45 — David (Claude, prueba completa mientras David dormía) — rama: docker
+- Prueba de punta a punta en la página real (Docker en la computadora de David):
+  - Backend con caché, 5 objetivos: /epocas 4–9 ms, /frames 5–9 ms, /diff 5–11 ms,
+    /spectrum 28–32 ms. Funciona SIN IRSA (a esa hora IRSA estaba caído: una zona sin caché
+    responde 504 con mensaje claro a los 9.5 s).
+  - Interfaz: clic en objetivo -> imágenes en 70–170 ms; cambiar D1–D6 instantáneo; Comparar
+    (Alternar, Deslizar, Diferencia, Suma) OK; Reproducir OK; Espectro de los 5 objetivos en
+    150–290 ms; "Excluir píxeles marcados" (Barnard 240 -> 79 puntos); apertura 24" OK.
+  - Errores (RA inválida, fov grande, detector malo, épocas iguales, etc.): 400/404/422 con
+    mensaje en español. /resolve de nombres nuevos usa internet (Betelgeuse 2.4 s).
+- CAUSA del "No se pudo calcular el espectro" que vio David: un clic sobre la imagen elige ese
+  punto exacto para el espectro (a 7" del objetivo ya no está en la caché), pero el panel
+  mostraba el centro. Arreglos (SIN commit, para revisar): clic a < 15" del centro = el
+  objetivo; el panel y el título dicen "punto elegido" si no lo es; nota "variabilidad
+  simulada" solo en modo demo; encabezados de la tabla sin mayúsculas (decían "Λ (MM)" y
+  "FLUJO (MJY)" = megajansky); un solo pedido de espectro al entrar a la pestaña.
+- Para probar en el navegador integrado se usó un proxy temporal en vite.config.ts; ya se
+  revirtió.
+
+### 2026-11-15 03:40 — David (con Claude) — rama: docker
+- T36 /spectrum: backend (app/ciencia/espectro.py, servicio.espectro, router con apertura,
+  anillo, fondo y movimiento propio), contrato actualizado en docs/api.md, 11 pruebas nuevas
+  (tests/test_espectro.py, 71 en total), modo mock con espectro falso.
+- Frontend: la pestaña Espectro nunca se mostraba (nadie quitaba `hidden` de #viewSpec): lo
+  arregla Espectro.ts. El cliente manda apertura/anillo/pm y usa fecha, época, error y
+  píxeles saturados; el espectro se recalcula solo al cambiar de objetivo.
+- precalcular.py: ahora también prepara el espectro, verifica que cada resultado SÍ quedó en
+  la caché y reintenta hasta 3 veces (antes decía OK aunque IRSA hubiera fallado, y esos
+  detectores tardaban ~20 s cada vez que se abría la página).
+- Resultados reales: Barnard ~4–6 Jy (D1–D4 saturado), Eps Indi B 3–53 mJy, WISE 0855 en el
+  nivel del ruido (esperado: es muy débil), RW Aur sube de 0.2 a 2 Jy hacia el infrarrojo,
+  R Draconis 4–16 Jy y todo saturado.
+- Pendiente: README (T74); despliegue (cuentas de Jesús); PR de `docker` a main.
+
+### 2026-11-15 02:15 — David (con Claude) — rama: docker
+- Contexto: trabajé en paralelo con Juan sin saberlo (misma lista de tareas). Mi versión del
+  backend quedó en un `git stash` ("respaldo: version paralela de David") y NO se usa: la rama
+  `docker` parte del main del equipo (9a9686a) y solo agrega lo que no existía.
+- Hecho (commit 2696fd5): docker-compose.yml, frontend/Dockerfile y .dockerignore,
+  vite.config.ts con polling, cache.py con Redis + disco, config.py (REDIS_URL,
+  REDIS_TTL_HORAS), requirements.txt (redis), tests/__init__.py (apaga Redis en pruebas),
+  tests/test_cache_redis.py, tests/test_precalcular.py, App.ts y precalcular.py centrados al
+  1 de enero. 60 pruebas OK en Docker.
+- Hecho (este commit): Dockerfile copia cache/ a la imagen; .dockerignore y .gitignore
+  ajustados (cache/.gitkeep se sube); backend/.gcloudignore; infra/cloudrun.env.yaml;
+  infra/despliegue.md con los pasos de Cloud Run y Vercel.
+- Precalculado: 5 objetivos x 6 detectores (unos 20 min; IRSA dio muchos 503 pero todo quedó).
+  Corrido 2 veces: la segunda, todo en (0 s).
+- Cómo probar: `docker compose up -d --build`, luego
+  `docker compose exec backend python -m unittest discover -v` (60 OK) y abrir
+  http://localhost:5173 (sin parámetros): los 5 botones cargan en 1 a 2 s. Redis:
+  `docker compose exec redis redis-cli --scan --pattern "spacecore:*"` lista claves.
+- Pendiente: ejecutar infra/despliegue.md (requiere cuentas de Google Cloud y Vercel, las tiene
+  Jesús); /spectrum (T36); README (T74). Si la página se publica desde un main SIN esta rama,
+  centrará en "hoy" y no aprovechará la caché precalculada.
+
 
 ### 2026-11-15 00:20 — Juan (con Claude) — rama: api/T22-T34-mvp-backend
 - Hecho: PRIMERA PRUEBA CON DATOS REALES, exitosa. La primera búsqueda de Barnard tardó 25 s

@@ -2,7 +2,7 @@ import { API_BASE, COLLECTION, DET, channelWidth, detector } from './config';
 import { ClienteApi } from './api/cliente';
 import { DemoSource } from './api/demoSource';
 import type { FrameSource, Observation, SkyPosition, Target, ViewName } from './api/source';
-import { currentDecimalYear, propagarProperMotion } from './lib/coords';
+import { currentDecimalYear, posicionEspectro, propagarProperMotion } from './lib/coords';
 import { download, showMessage, verifyElements } from './lib/dom';
 import { applyI18n } from './lib/i18n';
 import { localResolve, TARGETS } from './lib/objects';
@@ -19,13 +19,19 @@ import { mount as mountBuscador } from './components/busqueda/Buscador';
 import { mount as mountReproductor } from './components/visor/Reproductor';
 import { mount as mountEspectro } from './components/visor/Espectro';
 
+// Los objetivos se centran en su posición al 1 de enero del año en curso, no en la de "hoy":
+// así las coordenadas no cambian cada día y lo precalculado en la caché del backend sirve todo
+// el año. Barnard, la más rápida, se mueve menos de 11″ en un año: en un campo de 6′ no se nota.
+// backend/scripts/precalcular.py usa EXACTAMENTE esta misma regla: si cambias una, cambia la otra.
+function epocaDeCentrado(): number { return Math.floor(currentDecimalYear()); }
+
 const route = readUrlState();
 const queryTarget = TARGETS.find((target) => target.key === route.query) ?? localResolve(route.query);
 const defaultTarget: Target = queryTarget ?? TARGETS[0];
 const initialTarget = route.ra !== null && route.dec !== null ? queryTarget : defaultTarget;
 const defaultCenter = route.ra !== null && route.dec !== null
   ? { ra: route.ra, dec: route.dec }
-  : propagarProperMotion({ ra: defaultTarget.ra, dec: defaultTarget.dec, pmRA: defaultTarget.pmra, pmDec: defaultTarget.pmdec }, currentDecimalYear());
+  : propagarProperMotion({ ra: defaultTarget.ra, dec: defaultTarget.dec, pmRA: defaultTarget.pmra, pmDec: defaultTarget.pmdec }, epocaDeCentrado());
 const selectedDetector = detector(route.detector);
 const requestedLambda = route.lambda >= selectedDetector.min && route.lambda <= selectedDetector.max
   ? route.lambda : selectedDetector.min + (9.5 / 17) * (selectedDetector.max - selectedDetector.min);
@@ -39,7 +45,7 @@ const initialState: AppState = {
   center: defaultCenter, target: initialTarget, observations: [], currentIndex: 0, frame: null,
   frameA: null, frameB: null, slider: 0.5, loading: true, error: '',
   display: { stretch: 'asinh', smooth: true, commonScale: true, subtractBackground: true, grid: true, marker: true, showMask: false },
-  spectrum: { aperture: 18, annulusInner: 30, annulusOuter: 50, subtractBackground: true, showError: true, excludeMask: true, colorEpoch: true, logarithmic: true, points: [] },
+  spectrum: { aperture: 18, annulusInner: 30, annulusOuter: 50, subtractBackground: true, showError: true, excludeMask: false, colorEpoch: true, logarithmic: true, points: [] },
   selectedSource: null, gaiaEnabled: false,
 };
 
@@ -74,7 +80,7 @@ const actions: ViewActions = {
     }
   },
   selectTarget(target) {
-    const center = propagarProperMotion({ ra: target.ra, dec: target.dec, pmRA: target.pmra, pmDec: target.pmdec }, currentDecimalYear());
+    const center = propagarProperMotion({ ra: target.ra, dec: target.dec, pmRA: target.pmra, pmDec: target.pmdec }, epocaDeCentrado());
     const state = store.getState();
     const targetDetector = target.detector ?? state.detector;
     const range = detector(targetDetector);
@@ -147,12 +153,15 @@ const actions: ViewActions = {
   togglePlayback() { store.setState({ playing: !store.getState().playing }); },
   async computeSpectrum() {
     const state = store.getState();
+    const pedido = spectrumOptionsKey(state);
     store.setState({ error: '' });
     try {
-      const points = await source.spectrum(state.selectedSource ?? state.center, state.collection, {
+      const points = await source.spectrum(posicionEspectro(state.center, state.selectedSource), state.collection, {
         ap: state.spectrum.aperture, annIn: state.spectrum.annulusInner, annOut: state.spectrum.annulusOuter,
         subBg: state.spectrum.subtractBackground, exclMask: state.spectrum.excludeMask,
       }, state.target);
+      // Si mientras tanto cambió el objetivo o las opciones, esta respuesta ya es vieja.
+      if (spectrumOptionsKey(store.getState()) !== pedido) return;
       store.setState({ spectrum: { ...store.getState().spectrum, points } });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -239,10 +248,14 @@ function subscribeToState(): void {
       if (state.view === 'compare') void loadCompareFrames(loadSequence);
     } else if (changed.has('view') && state.view === 'compare') void loadCompareFrames(loadSequence);
     if (changed.has('collection') || changed.has('center') || changed.has('fovArcmin')) frameCache.clear();
-    if (changed.has('spectrum')) {
-      const currentOptions = spectrumOptionsKey(state);
-      if (currentOptions !== lastSpectrumOptions && state.view === 'spectrum') void actions.computeSpectrum();
+    // El espectro depende del objetivo, del centro y de las opciones de extracción. Si algo de
+    // eso cambia: en la pestaña Espectro se recalcula al momento; fuera de ella se borran los
+    // puntos viejos para que se recalcule al entrar (antes había que presionar "Recalcular").
+    const currentOptions = spectrumOptionsKey(state);
+    if (currentOptions !== lastSpectrumOptions) {
       lastSpectrumOptions = currentOptions;
+      if (state.view === 'spectrum') void actions.computeSpectrum();
+      else if (state.spectrum.points.length) store.setState({ spectrum: { ...state.spectrum, points: [] } });
     }
   });
 }

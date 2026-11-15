@@ -1,0 +1,80 @@
+# Docker Compose de SPACECORE (solo para desarrollo local en la computadora de cada quien).
+#
+# Levantar todo:          docker compose up -d --build
+# Ver cómo va:            docker compose ps
+# Ver errores:            docker compose logs -f backend
+# Apagar:                 docker compose down
+# Con base de datos:      docker compose --profile db up -d --build
+#
+# El equipo puede seguir trabajando sin Docker (uvicorn + npm run dev): este archivo no cambia
+# ningún archivo del proyecto.
+
+services:
+  # ---------------------------------------------------------------- Redis (caché)
+  redis:
+    image: redis:7.4-alpine          # versión fija, no "latest", para que a todos nos toque igual
+    container_name: spacecore_redis
+    ports:
+      - "6379:6379"
+    healthcheck:                     # el backend no arranca hasta que Redis conteste
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ---------------------------------------------------------------- Backend (FastAPI)
+  backend:
+    build: ./backend                 # usa backend/Dockerfile tal cual lo hizo el equipo
+    container_name: spacecore_backend
+    env_file:
+      - ./backend/.env               # COLECCION_SPHEREX, FOV_MAX, CORS_ORIGINS, USAR_MOCK, CACHE_DIR
+    environment:
+      PORT: "8000"                   # el Dockerfile usa 8080 (Cloud Run); en local usamos 8000
+      REDIS_URL: redis://redis:6379/0   # "redis" es el nombre del servicio, NO localhost
+      WATCHFILES_FORCE_POLLING: "true"  # para que --reload note los cambios hechos desde Windows
+      PYTHONUNBUFFERED: "1"             # para ver los mensajes del servidor al instante
+    # Mandamos nuestro propio comando para añadir --reload (el del Dockerfile es para producción).
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app               # tu código entra en vivo: lo que editas se aplica solo
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------- Frontend (Vite)
+  frontend:
+    build: ./frontend
+    container_name: spacecore_frontend
+    environment:
+      # La página corre en TU navegador (Windows), por eso aquí va localhost y no "backend".
+      VITE_API_URL: http://localhost:8000
+      DOCKER_POLLING: "1"   # para que Vite note los cambios hechos desde Windows (ver vite.config.ts)
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules            # node_modules de Linux, aparte del de Windows
+    depends_on:
+      - backend
+
+  # ---------------------------------------------------------------- EXTRA (opcional)
+  # Base de datos para guardar hallazgos de los usuarios (coordenadas marcadas).
+  # NO arranca con "docker compose up". Para encenderla:
+  #     docker compose --profile db up -d
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: spacecore_postgis
+    profiles: ["db"]
+    environment:
+      POSTGRES_DB: spacecore
+      POSTGRES_USER: spacecore
+      POSTGRES_PASSWORD: cambiar_esto
+    ports:
+      - "5433:5432"                  # 5433 del lado de Windows para no chocar con otro Postgres
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+
+volumes:
+  postgis_data:

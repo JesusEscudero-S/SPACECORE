@@ -1,5 +1,6 @@
 import type { SpectrumPoint } from '../../api/source';
 import { PIX_ARCSEC } from '../../config';
+import { posicionEspectro } from '../../lib/coords';
 import { translate } from '../../lib/i18n';
 import type { Store } from '../../state/store';
 import type { ViewActions } from '../contracts';
@@ -41,13 +42,19 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
         : '#99dce5';
     });
     const state = store.getState();
+    // Círculo hueco = había píxeles sin dato en la apertura (centro saturado): el flujo real es mayor.
+    const saturado = state.lang === 'es' ? '<br>centro saturado: flujo por debajo del real' : '<br>saturated core: flux underestimated';
     const trace: Record<string, unknown> = {
       type: 'scatter', mode: 'markers', name: translate(state.lang, 'legFlux'),
       x: valid.map((point) => point.lambda_um), y: valid.map((point) => point.flux_mjy),
-      marker: { color: colors, size: 7, line: { color: '#10151c', width: 1 } },
+      text: valid.map((point) => (point.nbad > 0 ? saturado : '')),
+      marker: {
+        color: colors, size: 7, line: { color: colors, width: 1.5 },
+        symbol: valid.map((point) => (point.nbad > 0 ? 'circle-open' : 'circle')),
+      },
       error_y: state.spectrum.showError ? { type: 'data', array: valid.map((point) => point.err_mjy), visible: true, color: '#99dce5', thickness: 1 } : { visible: false },
       customdata: valid.map((point) => point.obs_id),
-      hovertemplate: '%{x:.3f} µm<br>%{y:.3g} mJy<extra></extra>',
+      hovertemplate: '%{x:.3f} µm<br>%{y:.3g} mJy%{text}<extra></extra>',
     };
     const shapes = [1.09, 1.62, 2.41, 3.82, 4.42].map((x) => ({ type: 'line', x0: x, x1: x, y0: 0, y1: 1, yref: 'paper', line: { color: '#39424f', dash: 'dot', width: 1 } }));
     const layout: Record<string, unknown> = {
@@ -90,14 +97,38 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
     }
   }
 
+  // Muestra la sección del espectro y oculta el visor de imágenes (y al revés). Antes nadie
+  // quitaba el atributo hidden de #viewSpec, así que la pestaña "Espectro" nunca se veía.
+  function mostrarVista(): void {
+    const enEspectro = store.getState().view === 'spectrum';
+    const cielo = document.getElementById('viewSky');
+    const espectro = document.getElementById('viewSpec');
+    const cambio = cielo !== null && cielo.hidden !== enEspectro;
+    if (cielo) cielo.hidden = enEspectro;
+    if (espectro) espectro.hidden = !enEspectro;
+    // Al volver a mostrar el visor, que recalcule su tamaño (estuvo oculto con ancho 0).
+    if (cambio && !enEspectro) window.dispatchEvent(new Event('resize'));
+  }
+
   function render(): void {
     const state = store.getState();
+    mostrarVista();
     const colorSwitch = document.getElementById('swColorEpoch');
     const logSwitch = document.getElementById('swYlog');
     colorSwitch?.setAttribute('aria-checked', String(state.spectrum.colorEpoch));
     logSwitch?.setAttribute('aria-checked', String(state.spectrum.logarithmic));
     const subtitle = document.getElementById('specSub');
-    if (subtitle) subtitle.textContent = `${state.target?.name[state.lang] ?? 'Fuente'} · ${state.spectrum.points.length} puntos${state.api ? '' : state.lang === 'es' ? ' (simulados)' : ' (simulated)'}`;
+    if (subtitle) {
+      const elegido = posicionEspectro(state.center, state.selectedSource) !== state.center;
+      const nombre = elegido ? (state.lang === 'es' ? 'Punto elegido' : 'Selected point') : state.target?.name[state.lang] ?? 'Fuente';
+      subtitle.textContent = `${nombre} · ${state.spectrum.points.length} puntos${state.api ? '' : state.lang === 'es' ? ' (simulados)' : ' (simulated)'}`;
+      // Estrellas muy brillantes (R Draconis) saturan en TODAS las imágenes: con el filtro activo no queda ninguno.
+      if (state.api && state.spectrum.excludeMask && !state.spectrum.points.length) {
+        subtitle.textContent += state.lang === 'es'
+          ? ' · todos tienen el centro saturado: desactiva "Excluir píxeles marcados" para verlos'
+          : ' · all have a saturated core: turn off "Exclude flagged pixels" to see them';
+      }
+    }
     const metadata = document.getElementById('specMeta');
     if (metadata) {
       metadata.replaceChildren();
@@ -128,10 +159,11 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
     store.setState({ spectrum: { ...store.getState().spectrum, logarithmic: !store.getState().spectrum.logarithmic } });
   });
   store.subscribe((_state, changed) => {
+    if (changed.has('view')) mostrarVista();
     if (changed.has('view') && store.getState().view === 'spectrum') {
-      if (!store.getState().spectrum.points.length) void actions.computeSpectrum();
+      // El espectro lo pide App.setView al entrar a la pestaña (antes se pedía dos veces).
       render();
-    } else if (['spectrum', 'lang', 'collection', 'target'].some((key) => changed.has(key as keyof typeof _state))) render();
+    } else if (['spectrum', 'lang', 'collection', 'target', 'selectedSource'].some((key) => changed.has(key as keyof typeof _state))) render();
   });
   render();
 }

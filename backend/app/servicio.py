@@ -5,6 +5,11 @@ El camino de una búsqueda es:
     buscar_imagenes (IRSA, T10)  ->  agrupar_por_epoca (T12)  ->  descargar_recortes (T11)
     ->  alinear a la malla común (T23)  ->  sumar cada época (T22)  ->  PNG (T21)
 
+y el del espectro (T36), al final de este archivo:
+
+    buscar_imagenes  ->  recorte corto de cada imagen ("estampilla")  ->  longitud de onda
+    (tabla WCS-WAVE, una por detector)  ->  fotometría de apertura en cada estampilla
+
 Todo lo lento se guarda en la caché (T13):
 - La lista de imágenes de la zona (consulta SIA): una sola consulta sirve para los 6
   detectores, así que las 6 llamadas a /epocas que hace la página solo consultan IRSA una vez.
@@ -17,6 +22,7 @@ Con USAR_MOCK=1 no se consulta IRSA: se usan datos falsos de app/mock.py.
 import asyncio
 import io
 import logging
+import re
 import threading
 
 import numpy as np
@@ -32,6 +38,7 @@ from app.ciencia.alinear import (
     rellenar_huecos,
     sumar_epoca,
 )
+from app.ciencia import espectro as ciencia_espectro
 from app.ciencia.imagen import a_data_url, a_png, limites_brillo
 from app.config import settings
 from app.datos import cache
@@ -210,6 +217,16 @@ def _calcular_pila(ra: float, dec: float, fov: float, lista: list[dict]) -> tupl
     return np.stack(pila), usadas, completo
 
 
+def pila_en_cache(ra: float, dec: float, fov: float, det: str) -> bool:
+    """¿Quedaron guardadas las imágenes de este detector? (lo usa scripts/precalcular.py).
+
+    Si IRSA falla con alguna imagen, la pila NO se guarda (para no congelar un resultado
+    incompleto) y la página la vuelve a calcular en cada visita: tarda ~20 s por detector.
+    """
+    clave = cache.crear_clave("pila", ra, dec, fov, det)
+    return cache.get(clave) is not None and cache.get_bytes(clave) is not None
+
+
 def pila_de_epocas(ra: float, dec: float, fov: float, det: str) -> tuple[list[dict], np.ndarray]:
     """Devuelve (épocas, pila). Solo incluye las épocas que tienen al menos una imagen usable."""
     lista = epocas(ra, dec, fov, det)
@@ -280,3 +297,241 @@ def diferencia(ra: float, dec: float, fov: float, det: str, a: str, b: str) -> d
     png = a_png(resta, -limite, limite, asinh=False)
     return {"png": a_data_url(png), "epoca_a": a, "epoca_b": b}
 
+
+
+# ---------------------------------------------------------------------------------------------
+# /spectrum (T36). Ver app/ciencia/espectro.py para la explicación científica.
+# ---------------------------------------------------------------------------------------------
+# Recorte de cada imagen para el espectro: 0.035 grados = 126 arcsec (~20 x 20 píxeles), así
+# cabe un anillo de fondo de hasta 60 arcsec de radio. Pesa ~80 KB por imagen.
+TAM_ESPECTRO_GRADOS = 0.035
+RADIO_MAX_ARCSEC = 60.0
+# Un punto popular tiene 300-500 imágenes (6 detectores). Tomamos como máximo 40 por detector,
+# repartidas en el tiempo: el espectro sigue denso (240 puntos) y la primera vez tarda menos.
+MAX_IMAGENES_POR_DETECTOR = 40
+# Si se cambia cómo se calculan las estampillas, subir este número invalida la caché vieja.
+VERSION_ESTAMPILLAS = 1
+# Tamaño fijo de las estampillas guardadas (los recortes en el borde del detector salen más
+# chicos; se rellenan con NaN abajo y a la derecha, sin mover los índices de los píxeles).
+LADO_ESTAMPILLA = 24
+# La lista de imágenes de IRSA se guarda en la caché con el fov en la clave. Usamos el mismo
+# valor que pide la página (0.1), así el espectro reusa la consulta que ya hizo /epocas.
+FOV_ZONA = 0.1
+
+
+def _url_base(url: str) -> str:
+    return url.split("?", 1)[0]
+
+
+def _url_recorte(url: str, ra: float, dec: float, tam: float) -> str:
+    return f"{_url_base(url)}?center={ra},{dec}d&size={tam}"
+
+
+def _version_proceso(url: str) -> str:
+    """'.../l2b-v27-2026-229/2/...' -> 'l2b-v27'. La tabla WCS-WAVE depende de esto y del detector."""
+    encontrado = re.search(r"/(l2b-v\d+)-", url)
+    return encontrado.group(1) if encontrado else "desconocida"
+
+
+def _repartir(lista: list, maximo: int) -> list:
+    """Hasta `maximo` elementos repartidos parejo a lo largo de la lista (que viene por fecha)."""
+    if len(lista) <= maximo:
+        return list(lista)
+    indices = np.linspace(0, len(lista) - 1, maximo).round().astype(int)
+    return [lista[i] for i in sorted(set(indices))]
+
+
+def _tabla_onda(det: str, version: str, url: str, ra: float, dec: float):
+    """Tabla WCS-WAVE del detector (se baja una vez: es el final de un recorte completo)."""
+    clave = cache.clave_de_texto("wcs-wave", f"{det}|{version}")
+    with _candado(clave):
+        datos = cache.get_bytes(clave)
+        if datos is None:
+            completo = asyncio.run(
+                descargar_recortes([_url_recorte(url, ra, dec, 0.01)], max_concurrentes=1, completo=True)
+            )[0]
+            if completo is None:
+                return None
+            with abrir_recorte(completo) as hdul:
+                datos = ciencia_espectro.tabla_a_bytes(hdul["WCS-WAVE"])
+            cache.set_bytes(clave, datos)
+    return ciencia_espectro.bytes_a_tabla(datos)
+
+
+def _a_lado_fijo(datos: np.ndarray) -> np.ndarray:
+    salida = np.full((LADO_ESTAMPILLA, LADO_ESTAMPILLA), np.nan, dtype=np.float32)
+    alto = min(LADO_ESTAMPILLA, datos.shape[0])
+    ancho = min(LADO_ESTAMPILLA, datos.shape[1])
+    salida[:alto, :ancho] = datos[:alto, :ancho]
+    return salida
+
+
+def _calcular_estampillas(ra: float, dec: float, imagenes: list[dict]) -> tuple[list[dict], np.ndarray, np.ndarray, bool]:
+    """Baja el recorte corto de cada imagen y anota posición, longitud de onda y área del píxel."""
+    urls = [_url_recorte(i["url_recorte"], ra, dec, TAM_ESPECTRO_GRADOS) for i in imagenes]
+    recortes = asyncio.run(descargar_recortes(urls, max_concurrentes=4))
+    completo = all(r is not None for r in recortes)
+
+    tablas: dict[tuple[str, str], object] = {}
+    meta, imgs, varianzas = [], [], []
+    for imagen, datos in zip(imagenes, recortes):
+        if datos is None:
+            continue
+        clave_tabla = (imagen["detector"], _version_proceso(imagen["url_recorte"]))
+        if clave_tabla not in tablas:
+            tablas[clave_tabla] = _tabla_onda(*clave_tabla, imagen["url_recorte"], ra, dec)
+        tabla = tablas[clave_tabla]
+        if tabla is None:
+            completo = False
+            continue
+        try:
+            with abrir_recorte(datos) as hdul:
+                cabecera = hdul["IMAGE"].header
+                unidad = str(cabecera.get("BUNIT", "")).replace(" ", "").lower()
+                if unidad != "mjy/sr":
+                    registro.warning("Unidad inesperada %r en %s; se omite.", unidad, imagen["url_recorte"])
+                    continue
+                wcs = ciencia_espectro.wcs_espacial(cabecera)
+                x, y, jac = ciencia_espectro.posicion_y_jacobiano(wcs, ra, dec)
+                lam, ancho = ciencia_espectro.longitud_de_onda(cabecera, tabla, x, y)
+                meta.append({
+                    "x": x, "y": y, "jac": jac, "lambda_um": lam, "ancho_um": ancho,
+                    "area_sr": ciencia_espectro.area_pixel_sr(wcs),
+                    "mjd": imagen["mjd"], "fecha": imagen["fecha_obs"], "detector": imagen["detector"],
+                    "url": _url_base(imagen["url_recorte"]),
+                })
+                imgs.append(_a_lado_fijo(np.asarray(hdul["IMAGE"].data, dtype=np.float32)))
+                varianzas.append(_a_lado_fijo(np.asarray(hdul["VARIANCE"].data, dtype=np.float32)))
+        except Exception as error:  # un archivo dañado no debe tumbar todo el espectro
+            registro.warning("No se pudo usar un recorte para el espectro: %r", error)
+            completo = False
+    vacio = np.empty((0, LADO_ESTAMPILLA, LADO_ESTAMPILLA), dtype=np.float32)
+    return (
+        meta,
+        np.stack(imgs) if imgs else vacio,
+        np.stack(varianzas) if varianzas else vacio,
+        completo,
+    )
+
+
+def _clave_estampillas(ra: float, dec: float) -> str:
+    tipo = f"espectro-v{VERSION_ESTAMPILLAS}-max{MAX_IMAGENES_POR_DETECTOR}"
+    return cache.crear_clave(tipo, ra, dec, TAM_ESPECTRO_GRADOS)
+
+
+def estampillas_en_cache(ra: float, dec: float) -> bool:
+    """¿Ya quedó guardado el espectro de este punto? (lo usa scripts/precalcular.py)."""
+    return cache.get_bytes(_clave_estampillas(ra, dec)) is not None
+
+
+def estampillas(ra: float, dec: float) -> tuple[list[dict], np.ndarray, np.ndarray]:
+    """Estampillas del punto (de la caché si ya se calcularon)."""
+    imagenes = imagenes_de_zona(ra, dec, FOV_ZONA)
+    if not imagenes:
+        raise ErrorApi(404, "SPHEREx todavía no tiene imágenes de esa zona.")
+    por_detector: dict[str, list[dict]] = {}
+    for imagen in imagenes:
+        por_detector.setdefault(imagen["detector"], []).append(imagen)
+    elegidas = [i for det in sorted(por_detector) for i in _repartir(por_detector[det], MAX_IMAGENES_POR_DETECTOR)]
+
+    clave = _clave_estampillas(ra, dec)
+    with _candado(clave):
+        meta = cache.get(clave)
+        datos = cache.get_bytes(clave)
+        if meta is not None and datos is not None:
+            with np.load(io.BytesIO(datos), allow_pickle=False) as npz:
+                return meta, npz["imagenes"].astype(float), npz["varianzas"].astype(float)
+        meta, imgs, varianzas, completo = _calcular_estampillas(ra, dec, elegidas)
+        if completo and meta:
+            salida = io.BytesIO()
+            np.savez_compressed(salida, imagenes=imgs, varianzas=varianzas)
+            cache.set_bytes(clave, salida.getvalue())
+            cache.set(clave, meta)
+    if not meta:
+        raise ErrorApi(504, "No se pudo descargar ninguna imagen de IRSA. " + MENSAJE_IRSA_CAIDO)
+    return meta, imgs.astype(float), varianzas.astype(float)
+
+
+def _ids_de_epoca(ra: float, dec: float) -> dict[str, str]:
+    """URL base de cada imagen -> época ("E1"...), igual que en /epocas de su detector."""
+    imagenes = imagenes_de_zona(ra, dec, FOV_ZONA)
+    por_detector: dict[str, list[dict]] = {}
+    for imagen in imagenes:
+        por_detector.setdefault(imagen["detector"], []).append(imagen)
+    ids = {}
+    for lista in por_detector.values():
+        for epoca in agrupar_por_epoca(lista):
+            for imagen in epoca["imagenes"]:
+                ids[_url_base(imagen["url_recorte"])] = epoca["id"]
+    return ids
+
+
+def _anio_decimal(mjd: float) -> float:
+    """MJD -> año decimal, igual que demoSource.ts (2000 + (mjd - 51544.5) / 365.25)."""
+    return 2000.0 + (mjd - 51544.5) / 365.25
+
+
+def espectro(
+    ra: float,
+    dec: float,
+    apertura: float = 18.0,
+    anillo_in: float = 30.0,
+    anillo_out: float = 50.0,
+    restar_fondo: bool = True,
+    pmra: float = 0.0,
+    pmdec: float = 0.0,
+    epoca: float | None = None,
+) -> dict:
+    """Espectro del punto (contrato: GET /spectrum). Radios en arcsec; pm en mas/año.
+
+    Si se da `epoca` (año decimal de ra/dec) y movimiento propio, la apertura se coloca donde
+    estaba la estrella en la fecha de cada imagen (Barnard's Star se mueve 10 arcsec por año).
+    """
+    if not 0 < apertura < anillo_in < anillo_out <= RADIO_MAX_ARCSEC:
+        raise ErrorApi(
+            400,
+            f"Se necesita 0 < apertura < anillo interior < anillo exterior <= {RADIO_MAX_ARCSEC:g} arcsec.",
+        )
+    if settings.usar_mock:
+        return mock.espectro()
+
+    meta, imgs, varianzas = estampillas(ra, dec)
+    ids = _ids_de_epoca(ra, dec)
+    puntos = []
+    for info, imagen, varianza in zip(meta, imgs, varianzas):
+        x, y = info["x"], info["y"]
+        if epoca is not None and (pmra or pmdec):
+            anios = _anio_decimal(info["mjd"]) - epoca
+            este, norte = pmra * anios / 1000, pmdec * anios / 1000  # arcsec
+            (dxe, dxn), (dye, dyn) = info["jac"]
+            x, y = x + dxe * este + dxn * norte, y + dye * este + dyn * norte
+        suma, error, n_malos, n_apertura = ciencia_espectro.fotometria(
+            imagen, varianza, x, y,
+            apertura / ESCALA_ARCSEC_PX, anillo_in / ESCALA_ARCSEC_PX, anillo_out / ESCALA_ARCSEC_PX,
+            restar_fondo,
+        )
+        if n_apertura == 0 or not np.isfinite(suma):
+            continue
+        factor = info["area_sr"] * ciencia_espectro.MJY_A_MILIJY
+        puntos.append({
+            "lambda_um": round(info["lambda_um"], 4),
+            "ancho_um": round(info["ancho_um"], 4),
+            "flujo": float(suma * factor),
+            "error": float(error * factor) if np.isfinite(error) else None,
+            "fecha": info["fecha"],
+            "mjd": info["mjd"],
+            "detector": info["detector"],
+            "epoca": ids.get(info["url"], ""),
+            "n_malos": n_malos,
+        })
+    if not puntos:
+        raise ErrorApi(404, "No se pudo medir el brillo en ese punto (queda fuera de los recortes).")
+    puntos.sort(key=lambda p: p["lambda_um"])
+    return {
+        "puntos": puntos,
+        "unidad_flujo": "mJy",
+        "meta": {
+            "ra": ra, "dec": dec, "apertura_arcsec": apertura, "anillo_arcsec": [anillo_in, anillo_out],
+            "restar_fondo": restar_fondo, "n_imagenes": len(meta),
+        },
+    }

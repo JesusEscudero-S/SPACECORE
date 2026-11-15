@@ -34,7 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Endpoints del contrato: /resolve, /epocas, /frames y /diff.
+# Endpoints del contrato: /resolve, /epocas, /frames, /diff y /spectrum.
 app.include_router(imagenes.router)
 
 
@@ -49,6 +49,13 @@ NOMBRES_PARAMETROS = {
     "name": "el nombre (name)",
     "a": "la época a",
     "b": "la época b",
+    "apertura": "la apertura (arcsec)",
+    "anillo_in": "el anillo interior (arcsec)",
+    "anillo_out": "el anillo exterior (arcsec)",
+    "fondo": "restar fondo (fondo)",
+    "pmra": "el movimiento propio en RA (pmra)",
+    "pmdec": "el movimiento propio en Dec (pmdec)",
+    "epoca": "la época (año decimal)",
 }
 
 
