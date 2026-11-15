@@ -8,7 +8,7 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-14 23:45 |
+| Última actualización | 2026-11-15 00:00 |
 | Última persona que trabajó | Juan (con Claude, sesión en la nube) |
 | Rama activa | api/T22-T34-mvp-backend (4 commits encima de main; ver el historial) |
 | Tarea en curso | Backend del MVP terminado (T22, T23, T31, T32, T33, T34, T35, T37, T16) y conectado a la página; falta probarlo con datos REALES de IRSA |
@@ -31,6 +31,21 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   T55, que se dan por terminadas cuando funcionen con datos reales.
 
 ## Decisiones tomadas
+
+- (2026-11-14 noche) ALADIN SIN CDS NI ESAC: se probó desde la red del equipo (navegador del
+  desktop app, con CORS) qué servidores responden:
+  | Servicio | Resultado |
+  |---|---|
+  | IRSA HiPS (DSS2, 2MASS K, AllWISE W1, cubo SPHEREx DR1) | OK, ~0.1 s |
+  | VizieR espejo CfA (vizier.cfa.harvard.edu): Gaia DR3, AllWISE, Sesame | OK con CORS, 1 a 8 s |
+  | MAST/AWS y CSIRO (DSS2) | OK, 0.5 a 1.5 s |
+  | CDS (vizier, simbad, hipscat, sesame .cds.unistra.fr) | Alcanzable pero SIN CORS o timeout |
+  | ESAC (skies.esac.esa.int) | NO responde (timeout de 20 s) |
+  | IRSA TAP (gaia_dr3_source, allwise) | Más de 25 s: no sirve para el navegador |
+  Por eso: fondo por defecto = DSS2 de IRSA; Gaia DR3 y AllWISE se dibujan con
+  `A.catalogFromURL` sobre el espejo CfA de VizieR (cono = media diagonal del campo, máximo
+  3000 y 2000 fuentes); clic en una fuente = tabla de datos de Aladin. Se agregó el fondo
+  SPHEREx DR1 (cubo de 102 capas) que sigue la λ elegida en el panel.
 
 - (2026-11-14 noche) CO-ADD CON MEDIANA: cada época se arma reproyectando sus recortes a una
   malla común (norte arriba, este a la izquierda, 6.15"/px, centrada en ra/dec) y tomando la
@@ -95,6 +110,11 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 ## Problemas conocidos
 
+- Fondo SPHEREx en Aladin: la capa se elige con `setSliceNumber(índice)` usando la tabla de λ
+  del archivo properties del HiPS. No se pudo comprobar visualmente que el índice coincida
+  exacto con la λ (Aladin calcula la capa de forma lineal): revisar con un objeto brillante.
+- Gaia DR3 alrededor de Barnard's Star tarda ~8 s (1243 fuentes en 6'): es normal.
+
 - (2026-11-14 noche) SIN PROBAR CON DATOS REALES: la sesión de Claude no tenía acceso a IRSA.
   Cosas a revisar con datos reales: que la estrella quede en el centro y con el norte arriba
   (comparar con Aladin), cuánto tarda /frames la primera vez y si alguna época sale vacía.
@@ -148,6 +168,19 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-15 00:00 — Juan (con Claude, sesión en la nube) — rama: api/T22-T34-mvp-backend
+- Hecho: T51 completa (Aladin con Gaia DR3 y AllWISE superpuestos, fondo SPHEREx DR1 y retícula
+  en el centro) y prueba de qué servidores responden desde la red del equipo (tabla en
+  "Decisiones tomadas"). Cliente de la API: mensajes claros si el backend está apagado, sin
+  CORS o tarda más de 3 min, y chequeo de /health al arrancar.
+- Archivos: frontend/src/components/visor/VistaAladin.ts (reescrito), index.html (fondos y
+  switch de AllWISE), src/api/cliente.ts, src/App.ts, src/components/busqueda/PanelInfo.ts.
+- Cómo probar: `npm run dev` en frontend, abrir http://localhost:5173, activar "Gaia DR3" y
+  "AllWISE" en el panel derecho: aparecen círculos naranjas y verdes y el texto "Gaia DR3: N
+  fuentes". Clic en un círculo -> tabla con sus datos. En "Fondo" elegir SPHEREx DR1 y mover
+  el control de λ.
+
 
 ### 2026-11-14 23:45 — Juan (con Claude, sesión en la nube) — rama: api/T22-T34-mvp-backend
 - Hecho:

@@ -272,6 +272,11 @@ async function boot(): Promise<void> {
       else if (route.ra === null) store.setState({ error: store.getState().lang === 'es' ? `No se pudo resolver «${route.query}».` : `Could not resolve “${route.query}”.` });
     } catch (error) { store.setState({ error: error instanceof Error ? error.message : String(error) }); }
   }
+  if (source instanceof ClienteApi && !(await source.salud())) {
+    store.setState({ error: store.getState().lang === 'es'
+      ? `El backend (${initialState.api}) no responde a /health. Revisa que uvicorn esté corriendo.`
+      : `The backend (${initialState.api}) does not answer /health. Check that uvicorn is running.` });
+  }
   await actions.refresh();
   if (initialState.view === 'spectrum') await actions.computeSpectrum();
 }

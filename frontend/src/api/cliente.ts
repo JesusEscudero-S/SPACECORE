@@ -10,6 +10,8 @@ interface FrameApi { epoca: string; fecha: string; png: string }
 interface RespuestaFrames { frames: FrameApi[] }
 interface PuntoEspectro { lambda_um: number; flujo: number }
 
+const TIEMPO_LIMITE_MS = 180_000;
+
 class ErrorApi extends Error {
   constructor(mensaje: string, readonly estado: number) { super(mensaje); }
 }
@@ -47,9 +49,31 @@ export class ClienteApi implements FrameSource {
 
   constructor(base: string) { this.base = base.replace(/\/$/u, ''); }
 
+  /** ¿Responde el backend? Llama a /health con un límite de 5 s. */
+  async salud(): Promise<boolean> {
+    try {
+      const respuesta = await fetch(`${this.base}/health`, { signal: AbortSignal.timeout(5000) });
+      return respuesta.ok;
+    } catch { return false; }
+  }
+
   private async pedir<T>(ruta: string, params: Record<string, string | number>): Promise<T> {
     const consulta = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));
-    const respuesta = await fetch(`${this.base}${ruta}?${consulta}`);
+    // /frames puede tardar ~1 min la primera vez (descarga y suma las imágenes de IRSA).
+    const limite = new AbortController();
+    const reloj = setTimeout(() => limite.abort(), TIEMPO_LIMITE_MS);
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(`${this.base}${ruta}?${consulta}`, { signal: limite.signal });
+    } catch (error) {
+      // fetch solo falla así cuando NO hubo respuesta: servidor apagado, URL mal escrita o CORS.
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new ErrorApi(`El backend tardó más de ${TIEMPO_LIMITE_MS / 1000} s en ${ruta}. Vuelve a intentar: la segunda vez sale de la caché.`, 504);
+      }
+      throw new ErrorApi(`No se pudo conectar con el backend (${this.base}). Revisa que uvicorn esté corriendo y que CORS_ORIGINS incluya ${location.origin}.`, 0);
+    } finally {
+      clearTimeout(reloj);
+    }
     if (!respuesta.ok) {
       let mensaje = `HTTP ${respuesta.status} en ${ruta}`;
       try { const cuerpo = await respuesta.json() as { error?: string }; if (cuerpo.error) mensaje = cuerpo.error; } catch { /* sin JSON */ }

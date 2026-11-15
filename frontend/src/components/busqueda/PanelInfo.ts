@@ -1,5 +1,5 @@
 import { EXPLANATORY_SUPPLEMENT, PIX_ARCSEC } from '../../config';
-import { setSwitch, showMessage, verifyElements } from '../../lib/dom';
+import { setSwitch, verifyElements } from '../../lib/dom';
 import { translate } from '../../lib/i18n';
 import type { DisplaySettings, Store } from '../../state/store';
 import type { ViewActions } from '../contracts';
@@ -104,13 +104,9 @@ export function mount(_root: ParentNode, store: Store, _actions: ViewActions): v
     const specPosition = document.getElementById('specPos');
     if (specPosition) specPosition.textContent = `${state.center.ra.toFixed(5)}°, ${state.center.dec.toFixed(5)}°`;
     const cutFov = document.getElementById('cutFov'); if (cutFov) cutFov.textContent = `${state.spectrum.aperture}″`;
-    const gaia = document.getElementById('swGaia') as HTMLButtonElement | null;
-    if (gaia) { gaia.disabled = true; gaia.setAttribute('aria-checked', 'false'); }
   }
   store.subscribe((_state, changed) => {
     if (['display', 'spectrum', 'view', 'frame', 'target', 'center', 'fovArcmin', 'api', 'collection', 'lang', 'error'].some((key) => changed.has(key as keyof typeof _state))) render();
   });
   render();
-  const gaiaNote = document.getElementById('gaiaNotice');
-  if (!gaiaNote) showMessage('[aladinContext] La capa Gaia DR3 no está disponible en un servidor HiPS no-CDS verificado.', 'warn');
 }
