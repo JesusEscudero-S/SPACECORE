@@ -10,8 +10,10 @@ __pycache__/
 node_modules/
 dist/
 
-# Datos y caché (pesan mucho y se pueden volver a descargar)
-cache/
+# Datos y caché (pesan mucho y se pueden volver a descargar). El .gitkeep sí se sube: el
+# Dockerfile del backend necesita que la carpeta exista.
+**/cache/*
+!**/cache/.gitkeep
 *.fits
 
 # Secretos y configuración local

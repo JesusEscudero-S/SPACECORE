@@ -1,0 +1,12 @@
+# Qué NO se sube a Google Cloud al correr `gcloud run deploy --source backend`.
+# (Si este archivo no existiera, gcloud usaría .gitignore y dejaría fuera la caché precalculada,
+# que sí queremos mandar.)
+.venv/
+__pycache__/
+*.pyc
+*.fits
+.env
+.pytest_cache/
+.ipynb_checkpoints/
+tests/
+cache/*.tmp

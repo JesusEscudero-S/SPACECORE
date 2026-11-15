@@ -15,6 +15,12 @@ RUN pip install --no-cache-dir --default-timeout=120 --retries 10 -r requirement
 COPY app ./app
 COPY scripts ./scripts
 
+# La caché precalculada (T16) viaja DENTRO de la imagen: así la página publicada carga los 5
+# objetivos al instante aunque IRSA esté caído. Antes de construir la imagen de producción hay
+# que correr `python -m scripts.precalcular` (ver infra/despliegue.md). Si la carpeta solo trae
+# .gitkeep, la imagen arranca con la caché vacía y funciona igual, solo que más lento.
+COPY cache ./cache
+
 # Cloud Run indica el puerto con la variable PORT. En local usamos 8080.
 ENV PORT=8080
 

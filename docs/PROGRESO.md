@@ -8,13 +8,13 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-15 00:20 |
-| Última persona que trabajó | Juan (con Claude, sesión en la nube) |
-| Rama activa | api/T22-T34-mvp-backend (4 commits encima de main; ver el historial) |
-| Tarea en curso | Backend del MVP terminado (T22, T23, T31, T32, T33, T34, T35, T37, T16) y conectado a la página; falta probarlo con datos REALES de IRSA |
-| Punto exacto donde quedó | Todo pasa con IRSA simulado (48 pruebas) y la página funciona contra el backend en modo mock. Desde la sesión de Claude no se pudo llegar a IRSA (red bloqueada), así que NUNCA se corrió con recortes reales. |
-| Siguiente paso concreto | 1) En una computadora del equipo: `python -m unittest discover -v` y luego `python -m scripts.precalcular --objetivos barnard --detectores D2`, y revisar que las imágenes tengan sentido (ver "Cómo probar" de la entrada de hoy). 2) Unir el PR. 3) T61, T62, T63 (publicar). 4) Decidir cómo llevar la caché precalculada a Cloud Run (T14). |
-| ¿El código actual funciona? | SÍ, CON DATOS REALES (2026-11-15 00:00, computadora de Juan, Python 3.14.6 de Anaconda): Barnard's Star D2 dio 3 épocas (18, 18 y 25 imágenes) y la página las anima con `?api=http://127.0.0.1:8000`. 50 pruebas OK. |
+| Última actualización | 2026-11-15 02:15 |
+| Última persona que trabajó | David (con Claude) |
+| Rama activa | docker (1 commit encima de main; el segundo, con el despliegue, está en preparación) |
+| Tarea en curso | T60/T14/T16 listos en Docker; preparación de T61/T62 (falta ejecutar el despliegue, requiere las cuentas de Google Cloud y Vercel) |
+| Punto exacto donde quedó | Todo el sistema corre con `docker compose up -d --build` (Redis + backend + frontend). Los 5 objetivos x 6 detectores están precalculados en backend/cache. La guía de despliegue está en infra/despliegue.md; nadie la ha ejecutado todavía. |
+| Siguiente paso concreto | 1) Unir la rama `docker` a main (PR). 2) Seguir infra/despliegue.md con las cuentas de Jesús. 3) /spectrum (T36). |
+| ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 02:00, computadora de David): 60 pruebas OK; los 5 objetivos cargan en 1 a 2 s desde la caché; cambiar de detector también. |
 
 ## Tareas terminadas (unidas a main)
 
@@ -32,6 +32,24 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 ## Decisiones tomadas
 
+- (2026-11-15 madrugada, David) DOCKER PARA TODO EL EQUIPO: `docker-compose.yml` en la raíz
+  levanta Redis, backend (puerto 8000, con --reload) y frontend (5173) con un solo comando.
+  Quien prefiera Windows sin Docker sigue igual: no se cambió ningún comando del equipo.
+  Detalle de Windows: el contenedor no se entera cuando editas un archivo, así que Vite usa
+  "polling" (DOCKER_POLLING=1, ver vite.config.ts) y uvicorn WATCHFILES_FORCE_POLLING.
+- (2026-11-15 madrugada, David) CACHÉ EN REDIS + DISCO (T14, parcial): cache.py guarda en los
+  dos y lee primero de Redis (7 días de vida por clave). Si REDIS_URL está vacía o Redis no
+  responde, usa solo el disco sin error: así Cloud Run y Windows sin Docker funcionan igual.
+  Las pruebas apagan Redis en tests/__init__.py para no contaminar la caché real con imágenes
+  falsas. Librería nueva: redis==8.1.0.
+- (2026-11-15 madrugada, David) CENTRADO AL 1 DE ENERO: la página (App.ts, `epocaDeCentrado`)
+  y precalcular.py mueven los objetivos por su movimiento propio hasta el 1 de enero del año
+  en curso, no hasta "hoy". Antes la posición cambiaba cada día y la caché precalculada dejaba
+  de servir (incluida la evaluación de diciembre). Barnard se mueve < 11″ al año: no se nota
+  en un campo de 6′. tests/test_precalcular.py fija las coordenadas que calcula la página.
+- (2026-11-15 madrugada, David) LA CACHÉ VIAJA EN LA IMAGEN DE PRODUCCIÓN: `backend/Dockerfile`
+  copia `cache/` (solo tiene sentido después de correr precalcular.py). Cloud Run arranca con
+  los 5 objetivos listos aunque IRSA esté caído. Hay que volver a publicar si cambia la caché.
 - (2026-11-14 noche) ALADIN SIN CDS NI ESAC: se probó desde la red del equipo (navegador del
   desktop app, con CORS) qué servidores responden:
   | Servicio | Resultado |
@@ -168,6 +186,29 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-15 02:15 — David (con Claude) — rama: docker
+- Contexto: trabajé en paralelo con Juan sin saberlo (misma lista de tareas). Mi versión del
+  backend quedó en un `git stash` ("respaldo: version paralela de David") y NO se usa: la rama
+  `docker` parte del main del equipo (9a9686a) y solo agrega lo que no existía.
+- Hecho (commit 2696fd5): docker-compose.yml, frontend/Dockerfile y .dockerignore,
+  vite.config.ts con polling, cache.py con Redis + disco, config.py (REDIS_URL,
+  REDIS_TTL_HORAS), requirements.txt (redis), tests/__init__.py (apaga Redis en pruebas),
+  tests/test_cache_redis.py, tests/test_precalcular.py, App.ts y precalcular.py centrados al
+  1 de enero. 60 pruebas OK en Docker.
+- Hecho (este commit): Dockerfile copia cache/ a la imagen; .dockerignore y .gitignore
+  ajustados (cache/.gitkeep se sube); backend/.gcloudignore; infra/cloudrun.env.yaml;
+  infra/despliegue.md con los pasos de Cloud Run y Vercel.
+- Precalculado: 5 objetivos x 6 detectores (unos 20 min; IRSA dio muchos 503 pero todo quedó).
+  Corrido 2 veces: la segunda, todo en (0 s).
+- Cómo probar: `docker compose up -d --build`, luego
+  `docker compose exec backend python -m unittest discover -v` (60 OK) y abrir
+  http://localhost:5173 (sin parámetros): los 5 botones cargan en 1 a 2 s. Redis:
+  `docker compose exec redis redis-cli --scan --pattern "spacecore:*"` lista claves.
+- Pendiente: ejecutar infra/despliegue.md (requiere cuentas de Google Cloud y Vercel, las tiene
+  Jesús); /spectrum (T36); README (T74). Si la página se publica desde un main SIN esta rama,
+  centrará en "hoy" y no aprovechará la caché precalculada.
+
 
 ### 2026-11-15 00:20 — Juan (con Claude) — rama: api/T22-T34-mvp-backend
 - Hecho: PRIMERA PRUEBA CON DATOS REALES, exitosa. La primera búsqueda de Barnard tardó 25 s

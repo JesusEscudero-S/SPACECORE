@@ -1,8 +1,8 @@
 .venv/
 __pycache__/
 *.pyc
-cache/
+cache/*.tmp
 *.fits
 .env
-.pytest_cache/
+.pytest_cache/*.tmp
 .ipynb_checkpoints/
