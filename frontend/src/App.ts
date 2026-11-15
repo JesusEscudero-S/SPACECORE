@@ -176,7 +176,8 @@ const actions: ViewActions = {
 };
 
 function filterObservations(observations: Observation[], state: Readonly<AppState>): Observation[] {
-  const width = state.tolerance === 'inf' ? Infinity : Number(state.tolerance) * channelWidth(state.detector);
+  // Con backend, cada época es la suma de TODO el detector (no hay λ por imagen): el filtro de λ no aplica.
+  const width = state.tolerance === 'inf' || !source.isDemo ? Infinity : Number(state.tolerance) * channelWidth(state.detector);
   return observations.filter((observation) => observation.detector === state.detector && Math.abs(observation.lambda_um - state.lambda) <= width)
     .sort((a, b) => a.mjd - b.mjd);
 }
