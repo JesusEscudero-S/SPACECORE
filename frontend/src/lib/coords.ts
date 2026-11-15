@@ -131,3 +131,26 @@ export function currentDecimalYear(date = new Date()): number {
   return date.getUTCFullYear() + (date.getTime() - start) / (end - start);
 }
 
+
+
+/** Separación aproximada entre dos posiciones, en segundos de arco (válida para distancias cortas). */
+export function separacionArcsec(a: { ra: number; dec: number }, b: { ra: number; dec: number }): number {
+  const cosDec = Math.cos((((a.dec + b.dec) / 2) * Math.PI) / 180);
+  let dRa = a.ra - b.ra;
+  if (dRa > 180) dRa -= 360;
+  if (dRa < -180) dRa += 360;
+  return Math.hypot(dRa * cosDec, a.dec - b.dec) * 3600;
+}
+
+/** Radio (arcsec) dentro del cual un clic en la imagen cuenta como "el objetivo del centro". */
+export const RADIO_OBJETIVO_ARCSEC = 15;
+
+/**
+ * Dónde se calcula el espectro: el punto elegido con clic, salvo que el clic caiga a menos de
+ * RADIO_OBJETIVO_ARCSEC del centro (casi siempre es un clic sobre la misma estrella objetivo).
+ * Así un clic sobre la estrella no pide una posición nueva que no está en la caché.
+ */
+export function posicionEspectro(center: { ra: number; dec: number }, selected: { ra: number; dec: number } | null): { ra: number; dec: number } {
+  if (!selected || separacionArcsec(center, selected) < RADIO_OBJETIVO_ARCSEC) return center;
+  return selected;
+}

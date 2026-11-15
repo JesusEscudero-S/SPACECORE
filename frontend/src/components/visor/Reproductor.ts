@@ -136,7 +136,7 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
     const caption = document.getElementById('caption');
     if (caption) caption.textContent = state.view === 'compare'
       ? state.mode === 'diff' ? 'B − A · cian: más tenue · rojo: más brillante' : state.mode === 'sum' ? 'Promedio de las dos épocas seleccionadas' : state.mode === 'slider' ? 'Arrastra la línea para comparar épocas A y B.' : 'Alterna entre las épocas A y B.'
-      : state.target?.note?.[state.lang] ?? (state.api ? 'Datos proporcionados por el backend.' : state.lang === 'es' ? 'Imagen y variabilidad simuladas; no son mediciones SPHEREx.' : 'Simulated image and variability; not SPHEREx measurements.');
+      : state.target?.note ? `${state.target.note[state.lang]}${state.api ? '' : state.lang === 'es' ? ' (variabilidad simulada en la demo)' : ' (variability simulated in the demo)'}` : (state.api ? 'Datos proporcionados por el backend.' : state.lang === 'es' ? 'Imagen y variabilidad simuladas; no son mediciones SPHEREx.' : 'Simulated image and variability; not SPHEREx measurements.');
     const selected = document.getElementById('popCoords');
     if (selected && state.selectedSource) selected.textContent = `${state.selectedSource.ra.toFixed(5)}°, ${state.selectedSource.dec.toFixed(5)}°`;
   }

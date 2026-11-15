@@ -2,7 +2,7 @@ import { API_BASE, COLLECTION, DET, channelWidth, detector } from './config';
 import { ClienteApi } from './api/cliente';
 import { DemoSource } from './api/demoSource';
 import type { FrameSource, Observation, SkyPosition, Target, ViewName } from './api/source';
-import { currentDecimalYear, propagarProperMotion } from './lib/coords';
+import { currentDecimalYear, posicionEspectro, propagarProperMotion } from './lib/coords';
 import { download, showMessage, verifyElements } from './lib/dom';
 import { applyI18n } from './lib/i18n';
 import { localResolve, TARGETS } from './lib/objects';
@@ -156,7 +156,7 @@ const actions: ViewActions = {
     const pedido = spectrumOptionsKey(state);
     store.setState({ error: '' });
     try {
-      const points = await source.spectrum(state.selectedSource ?? state.center, state.collection, {
+      const points = await source.spectrum(posicionEspectro(state.center, state.selectedSource), state.collection, {
         ap: state.spectrum.aperture, annIn: state.spectrum.annulusInner, annOut: state.spectrum.annulusOuter,
         subBg: state.spectrum.subtractBackground, exclMask: state.spectrum.excludeMask,
       }, state.target);

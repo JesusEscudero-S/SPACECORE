@@ -34,14 +34,14 @@ export const TARGETS: readonly Target[] = [
     ra: 76.9573, dec: 30.4015, pmra: 0, pmdec: 0,
     aliases: ['rw aur', 'rw aurigae', 'rw auriga'], sed: { lambda: 2.2, flux: 1830, temperature: 4000 },
     variability: { kind: 'tts' },
-    note: { es: 'Estrella joven variable; variabilidad simulada.', en: 'Young variable star; variability is simulated.' },
+    note: { es: 'Estrella joven variable (tipo T Tauri): su brillo cambia de forma irregular.', en: 'Young variable star (T Tauri type): its brightness changes irregularly.' },
   },
   {
     key: 'rdra', name: { es: 'R Draconis', en: 'R Draconis' }, short: 'R Dra',
     ra: 248.178, dec: 66.755, pmra: 0, pmdec: 0,
     aliases: ['r dra', 'r draconis', 'r draconis mira'], sed: { lambda: 2.2, flux: 150000, temperature: 2800 },
     variability: { kind: 'mira', period: 245, amplitude: 0.7 },
-    note: { es: 'Variable tipo Mira; variabilidad simulada.', en: 'Mira-type variable; variability is simulated.' },
+    note: { es: 'Variable tipo Mira: su brillo cambia mucho en unos 8 meses.', en: 'Mira-type variable: its brightness changes strongly over about 8 months.' },
   },
 ];
 

@@ -1,3 +1,4 @@
+import { posicionEspectro } from '../../lib/coords';
 import { EXPLANATORY_SUPPLEMENT, PIX_ARCSEC } from '../../config';
 import { setSwitch, verifyElements } from '../../lib/dom';
 import { translate } from '../../lib/i18n';
@@ -102,11 +103,17 @@ export function mount(_root: ParentNode, store: Store, _actions: ViewActions): v
     const scaleNote = document.getElementById('scaleNote');
     if (scaleNote) scaleNote.textContent = `N ↑ · E ← · ${state.api ? 'SPHEREx · ' : 'DEMO · '}${PIX_ARCSEC}″/px`;
     const specPosition = document.getElementById('specPos');
-    if (specPosition) specPosition.textContent = `${state.center.ra.toFixed(5)}°, ${state.center.dec.toFixed(5)}°`;
+    if (specPosition) {
+      // La posición donde de verdad se calcula el espectro (ver posicionEspectro en lib/coords.ts).
+      const posicion = posicionEspectro(state.center, state.selectedSource);
+      const elegido = posicion !== state.center;
+      specPosition.textContent = `${posicion.ra.toFixed(5)}°, ${posicion.dec.toFixed(5)}°`
+        + (elegido ? (state.lang === 'es' ? ' · punto elegido con clic (no es el objetivo)' : ' · clicked point (not the target)') : '');
+    }
     const cutFov = document.getElementById('cutFov'); if (cutFov) cutFov.textContent = `${state.spectrum.aperture}″`;
   }
   store.subscribe((_state, changed) => {
-    if (['display', 'spectrum', 'view', 'frame', 'target', 'center', 'fovArcmin', 'api', 'collection', 'lang', 'error'].some((key) => changed.has(key as keyof typeof _state))) render();
+    if (['display', 'spectrum', 'view', 'frame', 'target', 'center', 'selectedSource', 'fovArcmin', 'api', 'collection', 'lang', 'error'].some((key) => changed.has(key as keyof typeof _state))) render();
   });
   render();
 }

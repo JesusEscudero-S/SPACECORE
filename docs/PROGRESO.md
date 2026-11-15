@@ -13,8 +13,20 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 | Rama activa | docker (subida a GitHub; 3 commits encima de main con el de esta sesión) |
 | Tarea en curso | T36 /spectrum terminado con datos reales. Despliegue (T61/T62/T63) en espera de las cuentas de Jesús. |
 | Punto exacto donde quedó | Todo corre con `docker compose up -d --build`. Los 5 objetivos (6 detectores + espectro) están precalculados en backend/cache. La pestaña Espectro ya se ve y carga sola al cambiar de objetivo. |
-| Siguiente paso concreto | 1) README (T74). 2) Desplegar con infra/despliegue.md (cuentas de Jesús). 3) Unir la rama `docker` a main (PR). |
+| Siguiente paso concreto | 1) Revisar y hacer commit de los 5 arreglos de la interfaz de la prueba de las 04:45 (ver historial). 2) Decidir con el equipo: Redis en la nube (Upstash gratis o solo disco) y centrado/actualización de datos (ver "Pendientes por decidir"). 3) README (T74). 4) Desplegar (cuentas de Jesús). 5) PR de `docker` a main. |
 | ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 03:30, computadora de David): 71 pruebas OK; /frames y /spectrum de los 5 objetivos responden en ~30 ms desde la caché. |
+
+## Pendientes por decidir con el equipo (David, 2026-11-15 04:00)
+
+- REDIS EN PRODUCCIÓN: hoy Cloud Run usaría solo el disco (los 5 objetivos vienen en la
+  imagen). Opción: Upstash gratis (256 MB, 500 mil comandos/mes); solo hay que poner
+  REDIS_URL como variable secreta en Cloud Run. Sirve para que las búsquedas NUEVAS del
+  jurado queden guardadas 7 días aunque Cloud Run apague el servidor.
+- CENTRADO Y DATOS NUEVOS: con el centrado al 1 de enero, después del 1-ene-2027 Barnard,
+  Eps Indi B y WISE 0855 dejan de salir de la caché (finalistas: finales de enero). Propuesta:
+  centrado fijo en 2026.0 + revisar la lista de IRSA cada 24 h y recalcular en segundo plano
+  si hay imágenes nuevas (cumple "fácil de actualizar con datos nuevos" del reto). Volver al
+  centrado diario del equipo es peor: la caché caduca cada 2 a 4 semanas.
 
 ## Tareas terminadas (unidas a main)
 
@@ -198,6 +210,25 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-15 04:45 — David (Claude, prueba completa mientras David dormía) — rama: docker
+- Prueba de punta a punta en la página real (Docker en la computadora de David):
+  - Backend con caché, 5 objetivos: /epocas 4–9 ms, /frames 5–9 ms, /diff 5–11 ms,
+    /spectrum 28–32 ms. Funciona SIN IRSA (a esa hora IRSA estaba caído: una zona sin caché
+    responde 504 con mensaje claro a los 9.5 s).
+  - Interfaz: clic en objetivo -> imágenes en 70–170 ms; cambiar D1–D6 instantáneo; Comparar
+    (Alternar, Deslizar, Diferencia, Suma) OK; Reproducir OK; Espectro de los 5 objetivos en
+    150–290 ms; "Excluir píxeles marcados" (Barnard 240 -> 79 puntos); apertura 24" OK.
+  - Errores (RA inválida, fov grande, detector malo, épocas iguales, etc.): 400/404/422 con
+    mensaje en español. /resolve de nombres nuevos usa internet (Betelgeuse 2.4 s).
+- CAUSA del "No se pudo calcular el espectro" que vio David: un clic sobre la imagen elige ese
+  punto exacto para el espectro (a 7" del objetivo ya no está en la caché), pero el panel
+  mostraba el centro. Arreglos (SIN commit, para revisar): clic a < 15" del centro = el
+  objetivo; el panel y el título dicen "punto elegido" si no lo es; nota "variabilidad
+  simulada" solo en modo demo; encabezados de la tabla sin mayúsculas (decían "Λ (MM)" y
+  "FLUJO (MJY)" = megajansky); un solo pedido de espectro al entrar a la pestaña.
+- Para probar en el navegador integrado se usó un proxy temporal en vite.config.ts; ya se
+  revirtió.
 
 ### 2026-11-15 03:40 — David (con Claude) — rama: docker
 - T36 /spectrum: backend (app/ciencia/espectro.py, servicio.espectro, router con apertura,

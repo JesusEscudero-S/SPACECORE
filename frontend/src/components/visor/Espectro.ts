@@ -1,5 +1,6 @@
 import type { SpectrumPoint } from '../../api/source';
 import { PIX_ARCSEC } from '../../config';
+import { posicionEspectro } from '../../lib/coords';
 import { translate } from '../../lib/i18n';
 import type { Store } from '../../state/store';
 import type { ViewActions } from '../contracts';
@@ -118,7 +119,9 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
     logSwitch?.setAttribute('aria-checked', String(state.spectrum.logarithmic));
     const subtitle = document.getElementById('specSub');
     if (subtitle) {
-      subtitle.textContent = `${state.target?.name[state.lang] ?? 'Fuente'} · ${state.spectrum.points.length} puntos${state.api ? '' : state.lang === 'es' ? ' (simulados)' : ' (simulated)'}`;
+      const elegido = posicionEspectro(state.center, state.selectedSource) !== state.center;
+      const nombre = elegido ? (state.lang === 'es' ? 'Punto elegido' : 'Selected point') : state.target?.name[state.lang] ?? 'Fuente';
+      subtitle.textContent = `${nombre} · ${state.spectrum.points.length} puntos${state.api ? '' : state.lang === 'es' ? ' (simulados)' : ' (simulated)'}`;
       // Estrellas muy brillantes (R Draconis) saturan en TODAS las imágenes: con el filtro activo no queda ninguno.
       if (state.api && state.spectrum.excludeMask && !state.spectrum.points.length) {
         subtitle.textContent += state.lang === 'es'
@@ -158,9 +161,9 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
   store.subscribe((_state, changed) => {
     if (changed.has('view')) mostrarVista();
     if (changed.has('view') && store.getState().view === 'spectrum') {
-      if (!store.getState().spectrum.points.length) void actions.computeSpectrum();
+      // El espectro lo pide App.setView al entrar a la pestaña (antes se pedía dos veces).
       render();
-    } else if (['spectrum', 'lang', 'collection', 'target'].some((key) => changed.has(key as keyof typeof _state))) render();
+    } else if (['spectrum', 'lang', 'collection', 'target', 'selectedSource'].some((key) => changed.has(key as keyof typeof _state))) render();
   });
   render();
 }
