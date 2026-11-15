@@ -11,7 +11,6 @@ Correr desde la carpeta backend:
 """
 
 import unittest
-from datetime import datetime, timezone
 
 from scripts.precalcular import OBJETIVOS, epoca_de_centrado, propagar
 
@@ -34,10 +33,10 @@ class PruebasPrecalcular(unittest.TestCase):
                 self.assertAlmostEqual(ra, esperado[0], places=9)
                 self.assertAlmostEqual(dec, esperado[1], places=9)
 
-    def test_epoca_es_el_1_de_enero(self):
-        self.assertEqual(epoca_de_centrado(datetime(2026, 11, 15, 6, tzinfo=timezone.utc)), 2026.0)
-        self.assertEqual(epoca_de_centrado(datetime(2026, 12, 20, 23, tzinfo=timezone.utc)), 2026.0)
-        self.assertEqual(epoca_de_centrado(datetime(2027, 1, 1, tzinfo=timezone.utc)), 2027.0)
+    def test_epoca_es_fija_en_2026(self):
+        # Decisión del equipo (2026-11-15): centrado fijo, para que la caché no caduque al
+        # cambiar de año. Debe coincidir con EPOCA_CENTRADO de frontend/src/config.ts.
+        self.assertEqual(epoca_de_centrado(), 2026.0)
 
 
 if __name__ == "__main__":

@@ -5,11 +5,11 @@ y después prepara el espectro (/spectrum, T36) del objetivo. Así queda todo gu
 carpeta de caché (CACHE_DIR, por defecto backend/cache/).
 
 IMPORTANTE (movimiento propio): para Barnard's Star, Epsilon Indi B y WISE 0855 la página no
-pide las coordenadas de catálogo, sino su posición al 1 DE ENERO DEL AÑO EN CURSO (las corrige
-por el movimiento de la estrella; ver epocaDeCentrado en frontend/src/App.ts y
+pide las coordenadas de catálogo, sino su posición en una FECHA FIJA, el 1 de enero de 2026
+(las corrige por el movimiento de la estrella; ver EPOCA_CENTRADO en frontend/src/config.ts y
 propagarProperMotion en frontend/src/lib/coords.ts). Este script hace exactamente la misma
-cuenta, así que lo precalculado sirve todo el año (también para la evaluación de diciembre).
-Solo hay que volver a correrlo a partir del 1 de enero.
+cuenta, así que lo precalculado no caduca al cambiar de año. Solo hay que volver a correrlo
+cuando SPHEREx publique datos nuevos o si se cambia EPOCA_CENTRADO.
 
 Uso (desde la carpeta backend, con el entorno .venv activado):
 
@@ -23,7 +23,6 @@ import argparse
 import logging
 import math
 import time
-from datetime import datetime, timezone
 
 from app import servicio
 from app.errores import ErrorApi
@@ -42,16 +41,15 @@ OBJETIVOS = {
 }
 
 
-def anio_decimal(fecha: datetime) -> float:
-    """Igual que currentDecimalYear() de la página: 2026.87 = noviembre de 2026."""
-    inicio = datetime(fecha.year, 1, 1, tzinfo=timezone.utc)
-    fin = datetime(fecha.year + 1, 1, 1, tzinfo=timezone.utc)
-    return fecha.year + (fecha - inicio) / (fin - inicio)
+# Fecha FIJA en la que se centran los objetivos (año decimal: 2026.0 = 1 de enero de 2026).
+# Debe ser IGUAL a EPOCA_CENTRADO de frontend/src/config.ts: si cambias uno, cambia el otro y
+# vuelve a correr este script.
+EPOCA_CENTRADO = 2026.0
 
 
-def epoca_de_centrado(fecha: datetime) -> float:
-    """Igual que epocaDeCentrado() de frontend/src/App.ts: el 1 de enero del año en curso."""
-    return float(math.floor(anio_decimal(fecha)))
+def epoca_de_centrado() -> float:
+    """Igual que epocaDeCentrado() de frontend/src/App.ts: una fecha fija."""
+    return EPOCA_CENTRADO
 
 
 def propagar(ra: float, dec: float, pmra: float, pmdec: float, anio: float) -> tuple[float, float]:
@@ -71,12 +69,11 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.WARNING)
-    ahora = datetime.now(timezone.utc)
     fallos = 0
     for clave in args.objetivos:
         nombre, ra0, dec0, pmra, pmdec = OBJETIVOS[clave]
-        # El mismo centro que pedirá la página durante todo el año (ver epoca_de_centrado).
-        centros = [propagar(ra0, dec0, pmra, pmdec, epoca_de_centrado(ahora))]
+        # El mismo centro que pide siempre la página (ver epoca_de_centrado).
+        centros = [propagar(ra0, dec0, pmra, pmdec, epoca_de_centrado())]
 
         for ra, dec in centros:
             for det in args.detectores:

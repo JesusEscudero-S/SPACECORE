@@ -44,7 +44,7 @@ export function mount(_root: ParentNode, store: Store, actions: ViewActions): vo
     const params = writeUrlState(state, false);
     if (kind === 'embed') params.set('embed', '1');
     const url = `${location.origin}${location.pathname}?${params.toString()}`;
-    const value = kind === 'embed' ? `<iframe src="${url}" title="Planet X · SPHEREx" width="100%" height="640" loading="lazy"></iframe>` : url;
+    const value = kind === 'embed' ? `<iframe src="${url}" title="SPACECORE · SPHEREx" width="100%" height="640" loading="lazy"></iframe>` : url;
     showTextModal(translate(state.lang, kind === 'embed' ? 'embedTitle' : 'linkTitle'), value,
       translate(state.lang, kind === 'embed' ? 'embedHelp' : 'linkHelp'));
   }
