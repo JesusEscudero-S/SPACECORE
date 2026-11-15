@@ -11,9 +11,9 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 | Última actualización | 2026-11-14 19:10 |
 | Última persona que trabajó | Jesús |
 | Rama activa | api/T02-contrato |
-| Tarea en curso | T02 Contrato de la API: versión 1 escrita en docs/api.md, falta que Jesús la apruebe y unir el PR |
+| Tarea en curso | T02 Contrato de la API: versión 1 en docs/api.md, APROBADA por Jesús el 2026-11-14; falta unir el PR |
 | Punto exacto donde quedó | docs/api.md tiene todos los endpoints con parámetros, ejemplos y errores. Falta revisarlo contra el diseño de interfaz que están preparando los compañeros. |
-| Siguiente paso concreto | Aprobar el contrato y unir el PR. Después T10 (consulta a IRSA) y T20/T21 (abrir un recorte y convertirlo a PNG). |
+| Siguiente paso concreto | Unir el PR de T02. Después T10 (consulta a IRSA) y T20/T21 (abrir un recorte y convertirlo a PNG). |
 | ¿El código actual funciona? | Sí: backend (/health) y frontend en local, y el backend dentro de Docker. T02 solo cambia documentos. |
 
 ## Tareas terminadas (unidas a main)
@@ -79,8 +79,8 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 - Hecho: PR #1 (T60) unido a main y ramas infra/T60-docker e infra/T03-cierre borradas. T03 se
   da por terminada. Cambio de reparto: Jesús y Claude hacen todo el código. T02: contrato
   versión 1 escrito en docs/api.md (parámetros, ejemplos, errores y tipos TypeScript).
-- A medias (y dónde quedó): T02 espera la aprobación de Jesús y el PR. Los compañeros están
-  preparando un diseño de interfaz; cuando llegue hay que revisar si el contrato le alcanza.
+- A medias (y dónde quedó): Jesús aprobó el contrato versión 1; falta unir el PR. Los compañeros
+  están preparando un diseño de interfaz; cuando llegue hay que revisar si el contrato le alcanza.
 - Siguiente paso: unir el PR de T02 y empezar T10.
 - Decisiones: ver "Decisiones tomadas" (nuevo reparto, orden de trabajo y campos agregados al
   contrato).
