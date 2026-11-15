@@ -1,10 +1,12 @@
 # Contrato de la API — SPACECORE
 
-> **Versión 1 (2026-11-14).** Este archivo es la fuente de verdad de cómo se hablan la página
+> **Versión 1.1 (2026-11-14).** Este archivo es la fuente de verdad de cómo se hablan la página
 > (frontend) y el servidor (backend). Si un cambio de código necesita modificarlo, primero se
 > cambia aquí y se avisa al equipo.
 >
-> Pendiente: revisarlo contra el diseño de interfaz del equipo cuando esté disponible.
+> Cambio de la versión 1.1: las imágenes de `/frames` y `/diff` van a **escala real** (un píxel
+> del PNG = un píxel de SPHEREx) en lugar de 256 px fijos, porque así lo espera la interfaz.
+> Se agrega `meta.escala_arcsec_px`.
 
 ## Reglas generales
 
@@ -157,7 +159,8 @@ Ejemplo: `GET /frames?ra=269.4521&dec=4.6934&fov=0.1&det=D2`
     "fov_grados": 0.1,
     "ra": 269.4521,
     "dec": 4.6934,
-    "tamano_px": 256
+    "tamano_px": 59,
+    "escala_arcsec_px": 6.15
   }
 }
 ```
@@ -168,9 +171,13 @@ Ejemplo: `GET /frames?ra=269.4521&dec=4.6934&fov=0.1&det=D2`
 - Todas las imágenes de una respuesta tienen el mismo tamaño, la misma zona de cielo y la misma
   escala de brillo, para que se puedan comparar al animarlas.
 - Orientación: norte arriba y este a la izquierda. El centro de la imagen es (`ra`, `dec`).
-- `meta.tamano_px`: ancho y alto del PNG en píxeles (es cuadrado).
-- `meta.ra`, `meta.dec` y `meta.tamano_px` se agregaron en esta versión respecto a la propuesta
-  inicial: la página los necesita para convertir un clic en coordenadas (tarea T55).
+- `meta.escala_arcsec_px`: cuántos segundos de arco de cielo mide cada píxel del PNG. Es el
+  tamaño de píxel de SPHEREx (6.15), porque las imágenes van a escala real, sin agrandar.
+- `meta.tamano_px`: ancho y alto del PNG en píxeles (es cuadrado). Sale del campo de visión:
+  `fov` en segundos de arco dividido entre la escala, redondeado. Para `fov=0.1` son 59 píxeles.
+- `meta.ra`, `meta.dec`, `meta.tamano_px` y `meta.escala_arcsec_px` no estaban en la propuesta
+  inicial: la página los necesita para la barra de escala y para convertir un clic en
+  coordenadas (tarea T55).
 
 Esta consulta puede tardar alrededor de 1 minuto la primera vez (después queda en caché).
 
@@ -282,6 +289,7 @@ export interface MetaFrames {
   ra: number
   dec: number
   tamano_px: number
+  escala_arcsec_px: number
 }
 
 export interface RespuestaFrames {
@@ -313,4 +321,3 @@ Estos valores se eligieron para poder avanzar y se pueden cambiar sin romper el 
 - `FOV_MAX` = 0.5 grados y `fov` mínimo = 0.01 grados.
 - `fov` por defecto = 0.1 grados.
 - `det` por defecto = `D2`.
-- `tamano_px` = 256.
