@@ -4,10 +4,11 @@ Qué hace: para cada objetivo y cada detector llama a /epocas y /frames por dent
 así quedan guardados en la carpeta de caché (CACHE_DIR, por defecto backend/cache/).
 
 IMPORTANTE (movimiento propio): para Barnard's Star, Epsilon Indi B y WISE 0855 la página no
-pide las coordenadas de catálogo, sino las de HOY (las corrige por el movimiento de la estrella,
-ver propagarProperMotion en frontend/src/lib/coords.ts). Este script hace la misma cuenta para
-hoy y los próximos días (--dias), para que la página encuentre justo esas búsquedas en la caché.
-Conviene correrlo el mismo día de la demo o el anterior.
+pide las coordenadas de catálogo, sino su posición al 1 DE ENERO DEL AÑO EN CURSO (las corrige
+por el movimiento de la estrella; ver epocaDeCentrado en frontend/src/App.ts y
+propagarProperMotion en frontend/src/lib/coords.ts). Este script hace exactamente la misma
+cuenta, así que lo precalculado sirve todo el año (también para la evaluación de diciembre).
+Solo hay que volver a correrlo a partir del 1 de enero.
 
 Uso (desde la carpeta backend, con el entorno .venv activado):
 
@@ -20,7 +21,7 @@ import argparse
 import logging
 import math
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from app import servicio
 from app.errores import ErrorApi
@@ -45,6 +46,11 @@ def anio_decimal(fecha: datetime) -> float:
     return fecha.year + (fecha - inicio) / (fin - inicio)
 
 
+def epoca_de_centrado(fecha: datetime) -> float:
+    """Igual que epocaDeCentrado() de frontend/src/App.ts: el 1 de enero del año en curso."""
+    return float(math.floor(anio_decimal(fecha)))
+
+
 def propagar(ra: float, dec: float, pmra: float, pmdec: float, anio: float) -> tuple[float, float]:
     """Igual que propagarProperMotion() de la página (época de catálogo 2000)."""
     anios = anio - 2000
@@ -58,7 +64,6 @@ def main() -> None:
     parser.add_argument("--objetivos", nargs="+", default=list(OBJETIVOS), choices=list(OBJETIVOS))
     parser.add_argument("--detectores", nargs="+", default=DETECTORES, choices=DETECTORES)
     parser.add_argument("--fov", type=float, default=0.1, help="grados (la página usa 0.1 = 6')")
-    parser.add_argument("--dias", type=int, default=2, help="también los próximos N días")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.WARNING)
@@ -66,12 +71,8 @@ def main() -> None:
     fallos = 0
     for clave in args.objetivos:
         nombre, ra0, dec0, pmra, pmdec = OBJETIVOS[clave]
-        # Centros distintos que pedirá la página entre hoy y dentro de --dias días.
-        centros = []
-        for dia in range(args.dias + 1):
-            ra, dec = propagar(ra0, dec0, pmra, pmdec, anio_decimal(ahora + timedelta(days=dia)))
-            if (round(ra, 4), round(dec, 4)) not in [(round(r, 4), round(d, 4)) for r, d in centros]:
-                centros.append((ra, dec))
+        # El mismo centro que pedirá la página durante todo el año (ver epoca_de_centrado).
+        centros = [propagar(ra0, dec0, pmra, pmdec, epoca_de_centrado(ahora))]
 
         for ra, dec in centros:
             for det in args.detectores:

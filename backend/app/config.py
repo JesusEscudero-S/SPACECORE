@@ -35,6 +35,17 @@ class Settings(BaseSettings):
     # Variable de entorno: CACHE_DIR
     cache_dir: str = "cache"
 
+    # Dirección de Redis, por ejemplo redis://redis:6379/0 (la pone docker-compose.yml).
+    # Vacío = sin Redis: la caché usa solo el disco. Así funciona en Windows sin Docker y en
+    # Cloud Run. Ver app/datos/cache.py.
+    # Variable de entorno: REDIS_URL
+    redis_url: str = ""
+
+    # Cuántas horas guarda Redis cada resultado antes de borrarlo (0 = para siempre).
+    # El disco no borra nada. SPHEREx publica datos nuevos cada semana: 168 horas = 7 días.
+    # Variable de entorno: REDIS_TTL_HORAS
+    redis_ttl_horas: float = 168
+
     @property
     def lista_colecciones_spherex(self) -> list[str]:
         """Convierte "a,b" en ["a", "b"]."""

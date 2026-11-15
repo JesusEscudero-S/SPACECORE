@@ -23,3 +23,6 @@ pillow==13.0.0
 httpx==0.28.1
 fsspec==2026.9.0
 s3fs==2026.9.0
+
+# Caché en memoria (opcional: si no hay Redis, la caché usa el disco). Ver app/datos/cache.py.
+redis==8.1.0

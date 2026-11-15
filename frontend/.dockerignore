@@ -1,0 +1,7 @@
+# Lo que NO entra a la imagen de Docker del frontend.
+# node_modules se ignora porque el de Windows no sirve dentro de Linux:
+# se instala limpio dentro del contenedor.
+node_modules
+dist
+.env
+.env.local

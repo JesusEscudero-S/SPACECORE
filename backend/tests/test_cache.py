@@ -19,11 +19,14 @@ class PruebasCache(unittest.TestCase):
         self._temporal = tempfile.TemporaryDirectory()
         self._carpeta_original = settings.cache_dir
         self._coleccion_original = settings.coleccion_spherex
+        self._redis_original = settings.redis_url
         settings.cache_dir = self._temporal.name
+        settings.redis_url = ""  # estas pruebas son del disco: sin Redis
 
     def tearDown(self):
         settings.cache_dir = self._carpeta_original
         settings.coleccion_spherex = self._coleccion_original
+        settings.redis_url = self._redis_original
         self._temporal.cleanup()
 
     def test_guardar_y_leer(self):

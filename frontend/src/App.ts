@@ -19,13 +19,19 @@ import { mount as mountBuscador } from './components/busqueda/Buscador';
 import { mount as mountReproductor } from './components/visor/Reproductor';
 import { mount as mountEspectro } from './components/visor/Espectro';
 
+// Los objetivos se centran en su posición al 1 de enero del año en curso, no en la de "hoy":
+// así las coordenadas no cambian cada día y lo precalculado en la caché del backend sirve todo
+// el año. Barnard, la más rápida, se mueve menos de 11″ en un año: en un campo de 6′ no se nota.
+// backend/scripts/precalcular.py usa EXACTAMENTE esta misma regla: si cambias una, cambia la otra.
+function epocaDeCentrado(): number { return Math.floor(currentDecimalYear()); }
+
 const route = readUrlState();
 const queryTarget = TARGETS.find((target) => target.key === route.query) ?? localResolve(route.query);
 const defaultTarget: Target = queryTarget ?? TARGETS[0];
 const initialTarget = route.ra !== null && route.dec !== null ? queryTarget : defaultTarget;
 const defaultCenter = route.ra !== null && route.dec !== null
   ? { ra: route.ra, dec: route.dec }
-  : propagarProperMotion({ ra: defaultTarget.ra, dec: defaultTarget.dec, pmRA: defaultTarget.pmra, pmDec: defaultTarget.pmdec }, currentDecimalYear());
+  : propagarProperMotion({ ra: defaultTarget.ra, dec: defaultTarget.dec, pmRA: defaultTarget.pmra, pmDec: defaultTarget.pmdec }, epocaDeCentrado());
 const selectedDetector = detector(route.detector);
 const requestedLambda = route.lambda >= selectedDetector.min && route.lambda <= selectedDetector.max
   ? route.lambda : selectedDetector.min + (9.5 / 17) * (selectedDetector.max - selectedDetector.min);
@@ -74,7 +80,7 @@ const actions: ViewActions = {
     }
   },
   selectTarget(target) {
-    const center = propagarProperMotion({ ra: target.ra, dec: target.dec, pmRA: target.pmra, pmDec: target.pmdec }, currentDecimalYear());
+    const center = propagarProperMotion({ ra: target.ra, dec: target.dec, pmRA: target.pmra, pmDec: target.pmdec }, epocaDeCentrado());
     const state = store.getState();
     const targetDetector = target.detector ?? state.detector;
     const range = detector(targetDetector);
