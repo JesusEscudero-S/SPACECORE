@@ -35,14 +35,15 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:5173 y debes ver el título SPACECORE.
+Abre http://localhost:5173 y debes ver la interfaz "Planet X · SPHEREx" con la Estrella de Barnard
+en modo demostración (datos simulados). Para conectarla al backend, ver `frontend/README.md`.
 
 ## Carpetas
 
 | Carpeta | Qué contiene |
 |---|---|
 | `backend/` | API con FastAPI (Python) |
-| `frontend/` | Página con React + Vite (TypeScript) |
+| `frontend/` | Página con TypeScript + Vite (sin React), Aladin Lite y Plotly |
 | `docs/` | Contrato de la API (`api.md`), bitácora (`PROGRESO.md`) y plan de tareas (`plan/tareas.csv`) |
 | `notebooks/` | Experimentos de ciencia |
 | `infra/` | Archivos de despliegue |
