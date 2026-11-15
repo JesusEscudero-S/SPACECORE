@@ -1,13 +1,296 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPACECORE</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Planet X · SPHEREx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/styles/controls.css">
+<link rel="stylesheet" href="/src/styles/layout.css">
+<link rel="stylesheet" href="/src/styles/spectrum.css">
+<link rel="stylesheet" href="/src/styles/dock.css">
+<link rel="stylesheet" href="/src/styles/modal.css">
+<link rel="stylesheet" href="/src/styles/responsive.css">
+<link rel="stylesheet" href="/src/styles/embed.css">
+</head>
+<body>
+<div id="app" class="app">
+
+<!-- ===================== HEADER ===================== -->
+<header class="top">
+  <div class="brand"><i aria-hidden="true"></i><span>Planet X</span><small>SPHEREx</small></div>
+  <form id="searchForm" class="search" role="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+    <input id="searchInput" class="inp" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="searchPh" data-i18n-aria="searchAria" />
+  </form>
+  <nav id="nav" class="seg" aria-label="Vistas">
+    <button type="button" data-view="explore" data-i18n="navExplore"></button>
+    <button type="button" data-view="compare" data-i18n="navCompare"></button>
+    <button type="button" data-view="spectrum" data-i18n="navSpectrum"></button>
+  </nav>
+  <div class="grow"></div>
+  <div class="top-right">
+    <button id="btnRail" type="button" class="btn sm railtoggle hide-embed" aria-expanded="false" data-i18n="railQuery"></button>
+    <button id="btnInsp" type="button" class="btn sm railtoggle hide-embed" aria-expanded="false" data-i18n="railPanel"></button>
+    <button id="btnLang" type="button" class="btn sm" aria-label="Language / Idioma">EN</button>
+    <button id="btnExport" type="button" class="btn sm hide-embed" aria-haspopup="true" aria-expanded="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V4"/></svg>
+      <span data-i18n="export"></span></button>
+    <button id="btnShare" type="button" class="btn sm" aria-haspopup="true" aria-expanded="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg>
+      <span data-i18n="share"></span></button>
+    <div id="menuExport" class="menu" hidden>
+      <button type="button" data-act="png"><span data-i18n="expPng"></span><span class="hint">PNG</span></button>
+      <button type="button" data-act="csv"><span data-i18n="expCsv"></span><span class="hint">CSV</span></button>
+    </div>
+    <div id="menuShare" class="menu" hidden>
+      <button type="button" data-act="link"><span data-i18n="shareLink"></span><span class="hint">URL</span></button>
+      <button type="button" data-act="embed"><span data-i18n="shareEmbed"></span><span class="hint">&lt;/&gt;</span></button>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== LEFT RAIL ===================== -->
+<aside id="leftRail" class="rail left collapsed" aria-label="Consulta">
+  <div class="stack">
+    <div class="row"><h2 class="h2" data-i18n="query"></h2><span class="hint">ICRS · °</span></div>
+    <form id="queryForm" class="stack" autocomplete="off">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label class="lbl" for="inRA" data-i18n="ra"></label><input id="inRA" class="inp num" inputmode="decimal" /></div>
+        <div><label class="lbl" for="inDec" data-i18n="dec"></label><input id="inDec" class="inp num" inputmode="decimal" /></div>
+      </div>
+      <div>
+        <div class="row"><label class="lbl" for="inFov" data-i18n="fov"></label><span id="fovHint" class="hint num"></span></div>
+        <div style="display:flex;gap:6px">
+          <input id="inFov" class="inp num" inputmode="decimal" />
+          <button type="button" class="btn icon" id="fovMinus" data-i18n-title="fovLess" aria-label="−">−</button>
+          <button type="button" class="btn icon" id="fovPlus" data-i18n-title="fovMore" aria-label="+">+</button>
+        </div>
+      </div>
+      <button type="submit" class="btn primary" style="width:100%;justify-content:center" data-i18n="search"></button>
+      <div id="centerNote" class="hint"></div>
+    </form>
+    <hr class="hr" />
+
+    <div id="detGroup" class="stack">
+      <div class="row"><span class="h2" data-i18n="detectors"></span><span id="detHint" class="hint num"></span></div>
+      <div id="detBtns" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px" role="group" aria-label="Detectores"></div>
+      <div>
+        <div class="row"><label class="lbl" for="inLam" data-i18n="lamRef"></label><span id="lamVal" class="num" style="font-size:12px"></span></div>
+        <input id="inLam" type="range" min="0" max="1000" step="1" />
+        <div class="hint" style="margin-top:4px" data-i18n="lamHelp"></div>
+      </div>
+      <div>
+        <label class="lbl" for="inTol" data-i18n="tol"></label>
+        <select id="inTol" class="sel">
+          
+        </select>
+      </div>
+      <div class="hint" data-i18n="channels"></div>
+    </div>
+    <hr class="hr" id="detHr" />
+
+    <div class="stack">
+      <div class="row"><label class="lbl" for="inColl" style="margin:0" data-i18n="data"></label>
+        <button type="button" id="btnRefresh" class="link" data-i18n="refresh"></button></div>
+      <select id="inColl" class="sel"></select>
+      <div class="hint" data-i18n="collHelp"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ===================== STAGE ===================== -->
+<main class="stage">
+  <div id="banner" class="banner" role="status" aria-live="polite" hidden>
+    <span id="bannerText"></span>
+    <button type="button" id="bannerClose" class="link" data-i18n="dismiss"></button>
+  </div>
+  <div class="stage-head">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <h1 id="title">—</h1><span id="subtitle" class="sub num"></span>
+    </div>
+    <div id="cmpModes" class="seg" role="group" hidden>
+      <button type="button" data-mode="blink" data-i18n="mBlink"></button>
+      <button type="button" data-mode="slider" data-i18n="mSlider"></button>
+      <button type="button" data-mode="diff" data-i18n="mDiff"></button>
+      <button type="button" data-mode="sum" data-i18n="mSum"></button>
+    </div>
+    <span id="cursorReadout" class="readout num"></span>
+  </div>
+  <div id="chips" class="chips"><span class="t" data-i18n="examples"></span></div>
+  <div id="cmpBar" class="subbar" hidden>
+    <label class="hint" for="selA">A</label><select id="selA" class="sel"></select>
+    <label class="hint" for="selB">B</label><select id="selB" class="sel"></select>
+    <span id="lamBadge"></span>
+  </div>
+
+  <!-- sky views (explore + compare) -->
+  <section id="viewSky" class="view">
+    <div id="skyWrap" class="canvas-wrap">
+      <canvas id="skyCanvas" role="img" aria-label="Imagen del cielo"></canvas>
+      <div id="frameChip" class="chipbox"></div>
+      <div id="chipA" class="chipbox" hidden>A</div><div id="chipB" class="chipbox" hidden>B</div>
+      <div id="sliderLine" class="slider-line" hidden><div id="sliderHandle" class="slider-handle" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-label="A / B">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l-3 3 3 3m8-6l3 3-3 3"/></svg></div></div>
+      <div id="srcPop" class="pop" hidden>
+        <div class="row" style="margin-bottom:2px"><b id="popTitle" style="font-size:12.5px"></b><button type="button" class="link" id="popClose" aria-label="×">×</button></div>
+        <div id="popCoords" class="hint num"></div>
+        <button type="button" class="btn sm" id="popSpec" style="margin-top:7px;color:var(--cyan)" data-i18n="viewSpec"></button>
+      </div>
+      <div class="tools hide-embed-tools">
+        <button type="button" class="btn icon sm" id="tZoomIn" data-i18n-title="zoomIn" aria-label="Zoom +"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v12M6 12h12"/></svg></button>
+        <button type="button" class="btn icon sm" id="tZoomOut" data-i18n-title="zoomOut" aria-label="Zoom −"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 12h12"/></svg></button>
+        <button type="button" class="btn icon sm" id="tCenter" data-i18n-title="recenter" aria-label="Recenter"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></button>
+        <button type="button" class="btn icon sm" id="tGrid" data-i18n-title="grid" aria-label="Grid" aria-pressed="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></button>
+        <button type="button" class="btn icon sm" id="tFull" data-i18n-title="fullscreen" aria-label="Fullscreen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
+      <div class="attr" id="scaleNote"></div>
+    </div>
+    <div id="caption" class="caption"></div>
+  </section>
+
+  <!-- spectrum view -->
+  <section id="viewSpec" class="view" hidden>
+    <div class="spec-bar">
+      <div><div class="h2" data-i18n="specTitle"></div><div id="specSub" class="hint"></div></div>
+      <div class="row" style="gap:8px"><span class="hint" data-i18n="colorEpoch"></span>
+        <button id="swColorEpoch" class="sw" role="switch" aria-checked="true" data-i18n-aria="colorEpoch"></button></div>
+      <div class="row" style="gap:8px"><span class="hint" data-i18n="ylog"></span>
+        <button id="swYlog" class="sw" role="switch" aria-checked="true" data-i18n-aria="ylog"></button></div>
+      <span id="specReadout" class="readout num" style="margin-left:auto"></span>
+    </div>
+    <div class="spec-main">
+      <div class="spec-legend">
+        <span><b style="color:var(--cyan)">●</b> <span data-i18n="legFlux"></span></span>
+        <span><span style="display:inline-block;width:1px;height:10px;background:var(--cyan);vertical-align:middle"></span> <span data-i18n="legErr"></span></span>
+        <span id="legEpoch"><span data-i18n="older"></span> <span class="grad"></span> <span data-i18n="newer"></span></span>
+        <span><span style="display:inline-block;width:14px;height:8px;border:1px dashed var(--muted);vertical-align:middle"></span> <span data-i18n="legGap"></span></span>
+      </div>
+      <div class="spec-box"><div id="specCanvas" role="img" aria-label="Espectro"></div></div>
+      <div class="hint" style="padding:6px 2px 8px" data-i18n="specNote"></div>
+    </div>
+    <div class="tblwrap"><table class="tbl"><thead><tr>
+      <th data-i18n="tDate"></th><th>λ (µm)</th><th data-i18n="tDets"></th><th data-i18n="unit"></th></tr></thead>
+      <tbody id="specRows"></tbody></table></div>
+  </section>
+</main>
+
+<!-- ===================== RIGHT INSPECTOR ===================== -->
+<aside id="inspector" class="rail right collapsed" aria-label="Inspector">
+  <!-- explore -->
+  <div id="inspExplore" class="stack">
+    <section class="card stack">
+      <div class="row"><h2 class="h2" data-i18n="context"></h2><span class="hint">Aladin Lite <span id="aladinVersion"></span></span></div>
+      <div id="aladin"><div id="aladinMsg" class="hint" style="padding:12px" data-i18n="aladinLoading"></div></div>
+      <div class="row"><span style="font-size:12px" data-i18n="baseLayer"></span>
+        <select id="aladinSurvey" class="sel" style="width:auto">
+          <option value="https://skies.esac.esa.int/DSSColor">DSS2 (óptico · ESAC)</option>
+          <option value="https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/DSSColor">DSS2 (MAST / AWS)</option>
+          <option value="https://irsa.ipac.caltech.edu/data/hips/CDS/DSS2/color">DSS2 (IRSA)</option>
+          <option value="https://casda.csiro.au/hips/DSS2/color">DSS2 (CSIRO)</option>
+          <option value="https://skies.esac.esa.int/AllWISEColor">AllWISE (3.4–12 µm · ESAC)</option>
+          <option value="https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/K">2MASS Ks (2.16 µm · IRSA)</option>
+        </select></div>
+      <div class="row"><span style="font-size:12px">Gaia DR3 <span class="hint" data-i18n="gaiaCat"></span></span>
+        <button id="swGaia" class="sw" role="switch" aria-checked="false" aria-label="Gaia DR3" disabled></button></div>
+      <p id="gaiaNotice" class="hint">Gaia DR3 está desactivado: no se encontró un servidor HiPS no-CDS verificable.</p>
+    </section>
+    <section class="card stack">
+      <h2 class="h2" data-i18n="display"></h2>
+      <div><label class="lbl" for="inStretch" data-i18n="stretch"></label>
+        <select id="inStretch" class="sel"><option value="asinh">asinh</option><option value="linear" data-i18n="linear"></option><option value="log">log</option></select></div>
+      <div class="row"><span style="font-size:12px" data-i18n="render"></span>
+        <div class="seg" id="segRender"><button type="button" data-v="pixel" data-i18n="rPixel"></button><button type="button" data-v="smooth" data-i18n="rSmooth"></button></div></div>
+      <div class="row"><span style="font-size:12px" data-i18n="commonScale"></span><button id="swCommon" class="sw" role="switch" aria-checked="true" data-i18n-aria="commonScale"></button></div>
+      <div class="row"><span style="font-size:12px" data-i18n="subBg"></span><button id="swSubBg" class="sw" role="switch" aria-checked="true" data-i18n-aria="subBg"></button></div>
+      <div class="row"><span style="font-size:12px" data-i18n="expected"></span><button id="swMarker" class="sw" role="switch" aria-checked="true" data-i18n-aria="expected"></button></div>
+      <div class="row"><span style="font-size:12px" data-i18n="maskPx"></span><button id="swMask" class="sw" role="switch" aria-checked="false" data-i18n-aria="maskPx"></button></div>
+    </section>
+    <section class="card stack">
+      <h2 class="h2" data-i18n="quality"></h2>
+      <dl id="flagList" class="kv"></dl>
+      <a class="hint" style="color:var(--cyan)" id="supLink" target="_blank" rel="noopener noreferrer" data-i18n="supLink"></a>
+    </section>
+  </div>
+
+  <!-- compare -->
+  <div id="inspCompare" class="stack" hidden>
+    <section class="card stack">
+      <h2 class="h2" data-i18n="prep"></h2>
+      <div class="row"><span style="font-size:12px" data-i18n="commonScale"></span><button id="swCommon2" class="sw" role="switch" aria-checked="true" data-i18n-aria="commonScale"></button></div>
+      <div class="row"><span style="font-size:12px" data-i18n="subBg"></span><button id="swSubBg2" class="sw" role="switch" aria-checked="true" data-i18n-aria="subBg"></button></div>
+      <div class="hint" id="alignNote"></div>
+    </section>
+    <section class="card stack">
+      <h2 class="h2" data-i18n="epochs"></h2>
+      <dl class="kv" id="cmpKv"></dl>
+      <div id="lamMsg" class="hint"></div>
+    </section>
+    <section class="card stack">
+      <h2 class="h2" data-i18n="legend"></h2>
+      <div class="lgrad" aria-hidden="true"></div>
+      <div class="row hint"><span data-i18n="neg"></span><span data-i18n="zero"></span><span data-i18n="pos"></span></div>
+      <div class="hint" data-i18n="diffHelp"></div>
+    </section>
+  </div>
+
+  <!-- spectrum -->
+  <div id="inspSpec" class="stack" hidden>
+    <section class="card stack">
+      <div class="row"><h2 class="h2" data-i18n="cutout"></h2><span class="hint num" id="cutFov"></span></div>
+      <canvas id="cutCanvas" class="mini" width="236" height="150"></canvas>
+      <div class="hint" data-i18n="cutLegend"></div>
+    </section>
+    <section class="card stack">
+      <h2 class="h2" data-i18n="extraction"></h2>
+      <div class="row" style="gap:8px"><div style="flex:1"><label class="lbl" for="inAp" data-i18n="aperture"></label>
+        <select id="inAp" class="sel"><option value="12">12″</option><option value="18" selected>18″</option><option value="24">24″</option></select></div>
+        <div style="flex:1"><label class="lbl" for="inAnn" data-i18n="annulus"></label>
+        <select id="inAnn" class="sel"><option value="30-50" selected>30–50″</option><option value="40-70">40–70″</option></select></div></div>
+      <div class="row"><span style="font-size:12px" data-i18n="subBgSpec"></span><button id="swSpBg" class="sw" role="switch" aria-checked="true" data-i18n-aria="subBgSpec"></button></div>
+      <div class="row"><span style="font-size:12px" data-i18n="showErr"></span><button id="swSpErr" class="sw" role="switch" aria-checked="true" data-i18n-aria="showErr"></button></div>
+      <div class="row"><span style="font-size:12px" data-i18n="exclBad"></span><button id="swSpMask" class="sw" role="switch" aria-checked="true" data-i18n-aria="exclBad"></button></div>
+      <button type="button" id="btnRecalc" class="btn primary" style="justify-content:center" data-i18n="recalc"></button>
+      <div class="hint" id="specPos"></div>
+    </section>
+    <section class="card stack">
+      <h2 class="h2" data-i18n="meta"></h2>
+      <dl class="kv" id="specMeta"></dl>
+    </section>
+  </div>
+</aside>
+
+<!-- ===================== DOCK ===================== -->
+<footer class="dock" id="dock">
+  <div class="ctrls">
+    <button type="button" class="btn icon" id="bPrev" data-i18n-title="prev" aria-label="Prev"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M8.4 14.8A1 1 0 0010 14v-2.8l5.4 3.6A1 1 0 0017 14V6a1 1 0 00-1.6-.8L10 8.8V6a1 1 0 00-1.6-.8l-6 4a1 1 0 000 1.6l6 4z"/></svg></button>
+    <button type="button" class="btn primary" id="bPlay" style="min-width:118px;justify-content:center"></button>
+    <button type="button" class="btn icon" id="bNext" data-i18n-title="next" aria-label="Next"><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M4.6 5.2A1 1 0 003 6v8a1 1 0 001.6.8L10 11.2V14a1 1 0 001.6.8l6-4a1 1 0 000-1.6l-6-4A1 1 0 0010 6v2.8L4.6 5.2z"/></svg></button>
+    <select id="inSpeed" class="sel" style="width:76px" aria-label="Velocidad / Speed">
+      <option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+  </div>
+  <div id="timeline" class="timeline" role="group" aria-label="Línea de tiempo"></div>
+  <div id="counter" class="counter num"></div>
+</footer>
+
+<div class="status">
+  <span id="statusDemo" class="demo-badge"></span>
+  <span><a id="docsLink" href="https://irsa.ipac.caltech.edu/Missions/spherex.html" target="_blank" rel="noopener noreferrer" data-i18n="docs"></a> · <span id="statusColl" class="mono"></span></span>
+</div>
+</div>
+
+<!-- modal -->
+<div id="backdrop" class="backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody" class="stack"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" id="modalClose" class="btn" data-i18n="close"></button></div>
+  </div>
+</div>
+
+
+<script type="module" src="/src/main.ts"></script>
+</body>
 </html>
