@@ -8,19 +8,20 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-14 19:10 |
+| Última actualización | 2026-11-14 20:05 |
 | Última persona que trabajó | Jesús |
-| Rama activa | api/T02-contrato |
-| Tarea en curso | T02 Contrato de la API: versión 1 en docs/api.md, APROBADA por Jesús el 2026-11-14; falta unir el PR |
-| Punto exacto donde quedó | docs/api.md tiene todos los endpoints con parámetros, ejemplos y errores. Falta revisarlo contra el diseño de interfaz que están preparando los compañeros. |
-| Siguiente paso concreto | Unir el PR de T02. Después T10 (consulta a IRSA) y T20/T21 (abrir un recorte y convertirlo a PNG). |
-| ¿El código actual funciona? | Sí: backend (/health) y frontend en local, y el backend dentro de Docker. T02 solo cambia documentos. |
+| Rama activa | datos/T10-buscar-imagenes |
+| Tarea en curso | T10 buscar_imagenes: hecha y probada con datos reales; falta unir el PR |
+| Punto exacto donde quedó | backend/app/datos/irsa.py devuelve las imágenes de SPHEREx de un punto usando el servicio SIA de IRSA. Probado con los 5 objetivos. |
+| Siguiente paso concreto | Unir el PR de T10. Después T20 y T21 (abrir un recorte y convertirlo a PNG) y T11 (descargas en paralelo). |
+| ¿El código actual funciona? | Sí: `python -m app.datos.irsa` (desde backend) devuelve 62 imágenes de Barnard's Star. |
 
 ## Tareas terminadas (unidas a main)
 
 - T03: estructura inicial en main, repo en GitHub, main protegida y los 5 compañeros con acceso
   (ya clonaron el repo, según confirmó Jesús el 2026-11-14).
 - T60: Dockerfile del backend probado en local (PR #1, unido a main el 2026-11-14).
+- T02: contrato de la API versión 1 en docs/api.md (PR #2, unido a main el 2026-11-14).
 
 ## Decisiones tomadas
 
@@ -34,8 +35,16 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   `meta.ra`, `meta.dec` y `meta.tamano_px` en /frames y `unidad_flujo` en /spectrum.
 - Nombre del proyecto y del repositorio: SPACECORE / spacecore.
 - Caché definitiva: PENDIENTE de decidir (bucket u otra opción). Por ahora, caché en disco.
-- Colección de datos de SPHEREx: PENDIENTE de confirmar en la documentación de IRSA
-  (los tutoriales recomiendan QR3 y DR1 sobre QR2). En config.py queda vacía por ahora.
+- Colección de datos de SPHEREx: RESUELTO el 2026-11-14. Se usan las colecciones SIA
+  `spherex_dr1` y `spherex_qr3` (valor por defecto de COLECCION_SPHEREX en config.py), tomadas
+  del tutorial oficial "Introduction to SPHEREx Spectral Images". Existen también
+  `spherex_dr1_deep` y `spherex_qr3_deep` (campos profundos), que no usamos.
+- T10 busca las imágenes con SIA (`Irsa.query_sia`) y no con TAP: TAP tardó más de 6 minutos y
+  terminó en error 502 tres veces; SIA respondió en 1 a 3 segundos con los mismos datos. La
+  desventaja de SIA (datos nuevos con ~1 día de retraso) no nos afecta.
+- Verificado con datos reales el 2026-11-14: tamaño de píxel de SPHEREx = 6.15 arcsec (columna
+  `s_pixel_scale` de SIA); la imagen viene en MJy/sr (BUNIT); las extensiones del recorte son
+  IMAGE, FLAGS, VARIANCE, ZODI, EPSF y WCS-WAVE (la de PSF se llama EPSF, no PSF).
 - FOV_MAX = 0.5 grados es un valor PROVISIONAL (nadie lo ha definido todavía); se cambia con
   la variable de entorno FOV_MAX.
 - Jupyter va en backend/requirements-dev.txt, separado de requirements.txt, para que la imagen
@@ -47,6 +56,13 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   frontend para probarlos. No afecta al proyecto.
 
 ## Problemas conocidos
+
+- Cada recorte de SPHEREx pesa ~3.9 MB aunque la imagen sea pequeña (53 x 59 píxeles para
+  fov = 0.1), porque trae la tabla EPSF completa. Barnard's Star tiene 62 imágenes en D2: son
+  unos 240 MB por búsqueda. Hay que tenerlo en cuenta en T11 (descargas) y T13 (caché), y
+  averiguar si IRSA permite pedir solo algunas extensiones.
+- La consulta TAP a IRSA (spherex.artifact + spherex.plane con CONTAINS) falló el 2026-11-14
+  con "502 Proxy Error" tras 400 segundos, tres veces seguidas. Por eso T10 usa SIA.
 
 - La conexión a PyPI falló dos veces por tiempo de espera al instalar las librerías de Python
   (red intermitente). Si `pip install` falla con "No matching distribution found", repetir con:
@@ -74,6 +90,23 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-14 20:05 — Jesús — rama: datos/T10-buscar-imagenes
+- Hecho: PR #2 (T02) unido a main y su rama borrada. T10: `buscar_imagenes(ra, dec,
+  fov_grados, detector)` en backend/app/datos/irsa.py, con el servicio SIA de IRSA. Devuelve
+  una lista ordenada por fecha con url_recorte, fecha_obs, mjd, detector y coleccion.
+  config.py: COLECCION_SPHEREX ahora vale por defecto "spherex_dr1,spherex_qr3".
+- Resultados reales (detector D2, fov 0.1): Barnard's Star 62 imágenes, WISE 0855 48,
+  Epsilon Indi B 93, RW Aurigae 55, R Draconis 89. Cada consulta tardó entre 1 y 1.5 s.
+  Barnard's Star tiene tres grupos de fechas: agosto de 2025, marzo de 2026 y agosto-septiembre
+  de 2026. Un recorte descargado dio HTTP 200, 3.9 MB, FITS válido.
+- A medias (y dónde quedó): falta unir el PR de T10.
+- Siguiente paso: T20 y T21 (recorte a PNG), luego T11 (descargas en paralelo).
+- Decisiones: SIA en lugar de TAP, y colecciones DR1 + QR3 (ver "Decisiones tomadas").
+  Jesús autorizó borrar siempre las ramas ya unidas a main.
+- Problemas: TAP de IRSA con error 502; cada recorte pesa ~3.9 MB (ver "Problemas conocidos").
+- Cómo probar: `cd backend`, `.venv\Scripts\Activate.ps1`, `python -m app.datos.irsa`. Debe
+  imprimir "Imágenes encontradas: 62" (o más, si SPHEREx publicó datos nuevos) y una URL.
 
 ### 2026-11-14 19:10 — Jesús — rama: api/T02-contrato
 - Hecho: PR #1 (T60) unido a main y ramas infra/T60-docker e infra/T03-cierre borradas. T03 se

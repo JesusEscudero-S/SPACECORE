@@ -181,6 +181,11 @@ Coordenadas en grados decimales ICRS. `fov` en grados. `det` = D1..D6. Errores s
   El header de IMAGE trae el WCS espacial y un WCS alterno 'W' para la longitud de onda.
 - Existe un HiPS de todo el cielo de SPHEREx (102 capas) que Aladin Lite puede mostrar:
   https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube
+- Verificado con datos reales el 2026-11-14: (1) usamos el servicio SIA
+  (`Irsa.query_sia` con las colecciones `spherex_dr1` y `spherex_qr3`) porque la consulta TAP
+  de arriba tardaba más de 6 minutos y daba error 502, mientras SIA responde en 1 a 3 s; (2) el
+  píxel mide 6.15 arcsec; (3) la imagen viene en MJy/sr; (4) la extensión de PSF se llama EPSF;
+  (5) cada recorte pesa ~3.9 MB por la tabla EPSF.
 - VERIFICA contra la documentación oficial antes de fijar en código: tamaño de píxel de SPHEREx
   (~6.2 arcsec), nombre de la colección vigente, tabla de Gaia DR3 en VizieR (I/355/gaiadr3) y
   la API de Aladin Lite. Si no puedes verificar algo, dilo.
