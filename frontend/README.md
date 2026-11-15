@@ -35,6 +35,10 @@ Extras que no tienen equivalente en el repo: `src/lib/` (coordenadas, objetos, r
 (estado y URL), `src/styles/`, `src/config.ts`. El HTML está en `index.html` (ids fijos; no cambiarlos).
 
 ## Qué funciona con el contrato de api.md y qué no
+- Probado con datos reales el 2026-11-15 (Barnard's Star, detector D2): se ven las 3 épocas y,
+  en Comparar > Diferencia, el par cian/rojo del movimiento de la estrella.
+- Con el backend, el filtro "λ de referencia / tolerancia" no aplica: cada cuadro es una época
+  que ya combina todo el detector. El filtro sigue activo en modo demostración.
 - Funciona: buscar por nombre o coordenadas, blink por época y detector, deslizar A/B, diferencia
   B−A y suma, Aladin, URL compartible, espectro (lambda vs flujo).
 - La diferencia y la suma se calculan en el navegador con los PNG, o sea con brillo ya escalado

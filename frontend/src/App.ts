@@ -176,7 +176,9 @@ const actions: ViewActions = {
 };
 
 function filterObservations(observations: Observation[], state: Readonly<AppState>): Observation[] {
-  const width = state.tolerance === 'inf' ? Infinity : Number(state.tolerance) * channelWidth(state.detector);
+  // Con el backend (docs/api.md) cada cuadro es una época que ya combina todo el detector, así
+  // que el filtro por longitud de onda solo tiene sentido en modo demostración.
+  const width = !source.isDemo || state.tolerance === 'inf' ? Infinity : Number(state.tolerance) * channelWidth(state.detector);
   return observations.filter((observation) => observation.detector === state.detector && Math.abs(observation.lambda_um - state.lambda) <= width)
     .sort((a, b) => a.mjd - b.mjd);
 }

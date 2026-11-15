@@ -8,13 +8,13 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-14 21:00 |
+| Última actualización | 2026-11-15 00:40 |
 | Última persona que trabajó | Jesús |
-| Rama activa | datos/T13-cache (hay 4 ramas con PR: T21, T11, T12 y T13; no chocan entre sí) |
-| Tarea en curso | Bloque T21 + T11 + T12 + T13 terminado; falta unir sus PR |
-| Punto exacto donde quedó | Ya existen las piezas sueltas del backend: buscar imágenes (irsa.py), descargarlas (descargas.py), agruparlas por época (epocas.py), convertirlas a PNG (ciencia/imagen.py) y guardarlas (cache.py). Falta unirlas en los endpoints. |
-| Siguiente paso concreto | Unir los 4 PR. Después T23 (reproyectar para dejar el norte arriba) y T22 (sumar las imágenes de cada época), y luego los endpoints T32, T33 y T34. |
-| ¿El código actual funciona? | Sí: `python -m unittest discover -v` desde backend pasa (29 pruebas con las 4 ramas unidas). El frontend funciona en modo demostración. |
+| Rama activa | api/T34-frames (un commit por tarea: T23, T22, endpoints y T52) |
+| Tarea en curso | MVP funcionando EN LOCAL con datos reales; falta unir el PR y publicar |
+| Punto exacto donde quedó | La interfaz conectada al backend muestra las 3 épocas reales de la Estrella de Barnard y, en Comparar > Diferencia, el par claro/oscuro de su movimiento. Solo se probó Barnard's Star con el detector D2. |
+| Siguiente paso concreto | Unir el PR. Probar los otros 4 objetivos y los demás detectores. Después publicar: T61 (Cloud Run), T62 (Vercel) y T63, y precalcular los 5 objetivos (T16). |
+| ¿El código actual funciona? | Sí: 56 pruebas pasan (`python -m unittest discover -v` desde backend) y la página funciona con `?api=http://127.0.0.1:8000`. |
 
 ## Tareas terminadas (unidas a main)
 
@@ -26,8 +26,26 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 - T40: interfaz del equipo en frontend/, TypeScript + Vite sin React (PR #4, unido a main el
   2026-11-14). Funciona en modo demostración; adelanta T41, T43, T44, T50, T51, T53, T54 y
   T55, que se dan por terminadas cuando funcionen con datos reales.
+- T21, T12, T13 y T11 (PR #5, #6, #7 y #8, unidos a main el 2026-11-14): imagen a PNG,
+  épocas, caché en disco y descargas en paralelo.
 
 ## Decisiones tomadas
+
+- T23, T22, T32, T33, T34 y T52 se hicieron en UNA sola rama (api/T34-frames) con un commit
+  por tarea, porque dependen unas de otras.
+- El recorte se pide a IRSA 1.5 veces más grande que el campo de visión (MARGEN_RECORTE en
+  servicio.py): los recortes llegan girados y así, al enderezarlos, cubren todo el cuadro.
+- La suma por época usa la MEDIANA y NO descarta píxeles por FLAGS: la bandera SOURCE (bit 21)
+  viene encendida en ~97 % de los píxeles y las de saturación caen justo sobre las estrellas
+  brillantes. El significado de cada bandera viene en el header de la extensión FLAGS
+  (tarjetas MSKN####, MSKM#### y MSKD####), útil para T15.
+- Una sola consulta a IRSA trae los 6 detectores y se guarda en la caché; así las 6 llamadas a
+  `/epocas` que hace la interfaz no repiten la consulta.
+- En la interfaz, el filtro por longitud de onda de referencia solo aplica en modo
+  demostración: con el backend cada cuadro ya combina todo el detector (cambio en App.ts).
+- `/resolve` usa Sesame y, si falla, una lista de respaldo con los 5 objetivos. Devuelve la
+  posición de catálogo (J2000); la interfaz corrige el movimiento propio de los 5 objetivos
+  con su propia lista (frontend/src/lib/objects.ts).
 
 - FRONTEND SIN REACT (2026-11-14): se adoptó la interfaz que preparó el equipo (TypeScript +
   Vite, archivos .ts). Su `frontend/src/api/cliente.ts` habla el contrato de docs/api.md y sin
@@ -76,6 +94,18 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 ## Problemas conocidos
 
+- La caché en disco no caduca: si SPHEREx publica datos nuevos de una zona ya consultada, hay
+  que borrar la carpeta cache/ para verlos. Además su ubicación depende de desde dónde se
+  arranca el backend (cache/ en la raíz o backend/cache/), salvo que se fije CACHE_DIR.
+- El centro de una estrella muy brillante (como Barnard's Star) sale como un punto oscuro: el
+  detector se satura ahí y esos píxeles vienen sin dato.
+- Doble estiramiento de brillo: el backend ya aplica asinh al crear el PNG y la interfaz vuelve
+  a estirar. Las imágenes se ven algo lavadas; se puede ajustar en la interfaz (Estiramiento >
+  lineal) o más adelante en el backend.
+- `/resolve` no devuelve movimiento propio. Para un objeto rápido que no esté entre los 5
+  objetivos, la búsqueda por nombre lo centra en su posición del año 2000.
+- Solo se probó con datos reales Barnard's Star en D2. Faltan los otros 4 objetivos y D1, D3-D6.
+
 - IRSA ESTUVO MUY INESTABLE el 2026-11-14 por la noche: el servicio SIA respondió "502 Proxy
   Error" en la mayoría de los intentos, a ratos en todos. `buscar_imagenes` reintenta 3 veces.
   Para la demo es indispensable precalcular los 5 objetivos y servirlos desde la caché (T16).
@@ -117,6 +147,25 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-15 00:40 — Jesús — rama: api/T34-frames
+- Hecho: PR #5 a #8 unidos a main. En esta rama:
+  - T23: backend/app/ciencia/alinear.py (malla común con norte arriba, `reproject_interp`).
+  - T22: backend/app/ciencia/coadd.py (mediana por época, restando el fondo).
+  - T32, T33, T34: routers resolve.py, epocas.py y frames.py; backend/app/servicio.py une
+    todo con caché; backend/app/errores.py da el formato `{"error": ...}` (400, 404, 422, 504).
+  - T52: la interfaz conectada al backend muestra datos reales (un ajuste en App.ts).
+- Resultado real: `/frames` de Barnard's Star (D2, fov 0.1) tardó 15.2 s la primera vez (61
+  recortes, 3 épocas: 18, 18 y 25 imágenes) y 0.2 s desde la caché. En Comparar > Diferencia
+  se ve el par cian/rojo del movimiento de la estrella hacia el norte entre agosto de 2025 y
+  agosto de 2026. Captura en docs/capturas/barnard_diferencia_2025_2026.jpg.
+- A medias (y dónde quedó): falta unir el PR. No se probaron los otros 4 objetivos ni los
+  demás detectores. Nada está publicado todavía (T61, T62, T63).
+- Siguiente paso: probar los 5 objetivos, publicar y precalcular (T16).
+- Decisiones y problemas: ver las secciones de arriba.
+- Cómo probar: terminal 1, desde backend: `uvicorn app.main:app --reload`. Terminal 2, desde
+  frontend: `npm run dev`. Abrir http://localhost:5173/?api=http://127.0.0.1:8000 y esperar
+  unos 15 a 30 s la primera vez. Pruebas: desde backend, `python -m unittest discover -v`.
 
 ### 2026-11-14 21:00 — Jesús — ramas: ciencia/T21-png, datos/T11-descargas, datos/T12-epocas, datos/T13-cache
 - Hecho: PR #3 (T10) y PR #4 (T40, interfaz del equipo) unidos a main. Después, cuatro tareas,
