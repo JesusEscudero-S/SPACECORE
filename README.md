@@ -6,7 +6,9 @@ Una herramienta web donde escribes coordenadas del cielo (RA/Dec) o el nombre de
 una secuencia de imágenes de la misión SPHEREx de esa zona en distintas fechas, como un pequeño
 video, para detectar objetos que se mueven o que cambian de brillo.
 
-> Estado: estructura inicial del proyecto. Todavía no hay funciones.
+> Estado (2026-11-14 noche): el backend ya responde `/resolve`, `/epocas`, `/frames` y `/diff`
+> (alinea y suma las imágenes de SPHEREx por época) y la página los muestra. Falta probarlo con
+> datos reales de IRSA y publicarlo. Detalle en `docs/PROGRESO.md`.
 
 ## Cómo correrlo (Windows PowerShell)
 
@@ -24,6 +26,10 @@ uvicorn app.main:app --reload
 
 Abre http://127.0.0.1:8000/health y debes ver `{"status":"ok"}`.
 La documentación automática está en http://127.0.0.1:8000/docs.
+
+Prueba rápida sin IRSA: `$env:USAR_MOCK="1"` antes de `uvicorn` (datos falsos).
+Para dejar listos los 5 objetivos de la demo: `python -m scripts.precalcular`.
+Pruebas automáticas: `python -m unittest discover -v`.
 
 Solo si vas a usar los notebooks: `pip install -r requirements-dev.txt` (agrega Jupyter).
 

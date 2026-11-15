@@ -8,15 +8,18 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-14 21:00 |
-| Última persona que trabajó | Jesús |
-| Rama activa | datos/T13-cache (hay 4 ramas con PR: T21, T11, T12 y T13; no chocan entre sí) |
-| Tarea en curso | Bloque T21 + T11 + T12 + T13 terminado; falta unir sus PR |
-| Punto exacto donde quedó | Ya existen las piezas sueltas del backend: buscar imágenes (irsa.py), descargarlas (descargas.py), agruparlas por época (epocas.py), convertirlas a PNG (ciencia/imagen.py) y guardarlas (cache.py). Falta unirlas en los endpoints. |
-| Siguiente paso concreto | Unir los 4 PR. Después T23 (reproyectar para dejar el norte arriba) y T22 (sumar las imágenes de cada época), y luego los endpoints T32, T33 y T34. |
-| ¿El código actual funciona? | Sí: `python -m unittest discover -v` desde backend pasa (29 pruebas con las 4 ramas unidas). El frontend funciona en modo demostración. |
+| Última actualización | 2026-11-14 23:45 |
+| Última persona que trabajó | Juan (con Claude, sesión en la nube) |
+| Rama activa | api/T22-T34-mvp-backend (4 commits encima de main; ver el historial) |
+| Tarea en curso | Backend del MVP terminado (T22, T23, T31, T32, T33, T34, T35, T37, T16) y conectado a la página; falta probarlo con datos REALES de IRSA |
+| Punto exacto donde quedó | Todo pasa con IRSA simulado (48 pruebas) y la página funciona contra el backend en modo mock. Desde la sesión de Claude no se pudo llegar a IRSA (red bloqueada), así que NUNCA se corrió con recortes reales. |
+| Siguiente paso concreto | 1) En una computadora del equipo: `python -m unittest discover -v` y luego `python -m scripts.precalcular --objetivos barnard --detectores D2`, y revisar que las imágenes tengan sentido (ver "Cómo probar" de la entrada de hoy). 2) Unir el PR. 3) T61, T62, T63 (publicar). 4) Decidir cómo llevar la caché precalculada a Cloud Run (T14). |
+| ¿El código actual funciona? | Sí con datos simulados: 48 pruebas OK, `npm run typecheck` y `npm run build` OK, la página carga las épocas y los cuadros del backend en modo mock. Con datos reales: SIN PROBAR. |
 
 ## Tareas terminadas (unidas a main)
+
+- T11, T12, T13, T21: unidas a main (el último es el PR #8). Ya no queda ninguna rama abierta
+  aparte de la de esta sesión.
 
 - T03: estructura inicial en main, repo en GitHub, main protegida y los 5 compañeros con acceso
   (ya clonaron el repo, según confirmó Jesús el 2026-11-14).
@@ -28,6 +31,22 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   T55, que se dan por terminadas cuando funcionen con datos reales.
 
 ## Decisiones tomadas
+
+- (2026-11-14 noche) CO-ADD CON MEDIANA: cada época se arma reproyectando sus recortes a una
+  malla común (norte arriba, este a la izquierda, 6.15"/px, centrada en ra/dec) y tomando la
+  mediana píxel a píxel, después de restarle a cada recorte su fondo (su mediana). La mediana
+  quita rayos cósmicos; restar el fondo hace falta porque cada imagen de un detector está en una
+  λ un poco distinta. Es para VER, no es fotometría calibrada. Todavía no se usan FLAGS ni
+  VARIANCE (eso queda para T15).
+- (2026-11-14 noche) CACHÉ DE LA API: se guarda (1) la lista de imágenes de la zona, una sola
+  consulta SIA para los 6 detectores, y (2) la "pila" de épocas ya sumadas (.bin con NumPy).
+  NO se guardan los recortes crudos (en Cloud Run el disco ocupa memoria RAM). Si alguna
+  descarga falla, el resultado se entrega pero no se guarda, para reintentar la próxima vez.
+  La caché no caduca: si IRSA publica épocas nuevas, hay que borrar la carpeta cache/.
+- (2026-11-14 noche) /resolve responde los 5 objetivos de prueba sin internet (tabla en
+  app/servicio.py) y para los demás usa SkyCoord.from_name (Sesame del CDS).
+- (2026-11-14 noche) La página, en modo API, ya no filtra las épocas por λ (cada época suma
+  todo el detector). Cambio de una línea en frontend/src/App.ts (filterObservations).
 
 - FRONTEND SIN REACT (2026-11-14): se adoptó la interfaz que preparó el equipo (TypeScript +
   Vite, archivos .ts). Su `frontend/src/api/cliente.ts` habla el contrato de docs/api.md y sin
@@ -76,6 +95,18 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 ## Problemas conocidos
 
+- (2026-11-14 noche) SIN PROBAR CON DATOS REALES: la sesión de Claude no tenía acceso a IRSA.
+  Cosas a revisar con datos reales: que la estrella quede en el centro y con el norte arriba
+  (comparar con Aladin), cuánto tarda /frames la primera vez y si alguna época sale vacía.
+- La página permite un campo de visión de hasta 40' (0.67 grados), pero el backend acepta
+  hasta FOV_MAX = 0.5 grados: entre 30' y 40' la página mostrará "El campo de visión máximo
+  es 0.5 grados". Decidir si se sube FOV_MAX o se limita la página a 30'.
+- La caché precalculada (T16) queda en la carpeta cache/ de quien corre el script. Cloud Run
+  empieza cada instancia con el disco vacío: para la demo hay que llevar esa caché (T14:
+  bucket, o copiarla dentro de la imagen de Docker). DECISIÓN DEL EQUIPO.
+- Sin acceso de escritura de Claude al repo (la app de Claude no está instalada en
+  JesusEscudero-S/spacecore): los cambios de esta sesión se entregaron como archivo para subirlos a mano.
+
 - IRSA ESTUVO MUY INESTABLE el 2026-11-14 por la noche: el servicio SIA respondió "502 Proxy
   Error" en la mayoría de los intentos, a ratos en todos. `buscar_imagenes` reintenta 3 veces.
   Para la demo es indispensable precalcular los 5 objetivos y servirlos desde la caché (T16).
@@ -117,6 +148,38 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-14 23:45 — Juan (con Claude, sesión en la nube) — rama: api/T22-T34-mvp-backend
+- Hecho:
+  - T23 + T22: backend/app/ciencia/alinear.py (`malla_objetivo`, `alinear_recorte`,
+    `sumar_epoca`). Reproyecta cada recorte con `reproject` y suma por mediana.
+  - T32, T33, T34, T35, T37 y T31: backend/app/servicio.py (une todo), routers/imagenes.py
+    (/resolve, /epocas, /frames, /diff), errores.py (formato {"error"}), mock.py (USAR_MOCK=1).
+    irsa.py: `buscar_imagenes(..., detector=None)` trae los 6 detectores en una consulta.
+    imagen.py: `a_png(..., asinh=False)` para la diferencia (gris = sin cambio).
+  - T16: backend/scripts/precalcular.py (5 objetivos, corrige el movimiento propio igual que
+    la página).
+  - T52: la página carga los cuadros reales del backend (arreglo del filtro de λ en App.ts).
+  - Pruebas nuevas: tests/test_alinear.py y tests/test_api.py (IRSA simulado). Total: 48.
+- A medias (y dónde quedó): falta la prueba con datos reales (ver "Problemas conocidos").
+  /spectrum (T36, Extra) no está hecho.
+- Siguiente paso: probar con datos reales, unir el PR y publicar (T61, T62, T63).
+- Decisiones: co-add con mediana, qué se guarda en caché y /resolve con respaldo (ver arriba).
+- Problemas: sin red a IRSA desde la sesión; FOV de la página mayor que FOV_MAX; la caché
+  precalculada no viaja sola a Cloud Run.
+- Cómo probar (PowerShell, desde backend con .venv activado):
+  - `python -m unittest discover -v` -> termina en "Ran 48 tests ... OK".
+  - Datos reales: `python -m scripts.precalcular --objetivos barnard --detectores D2` -> debe
+    imprimir "OK  Barnard's Star  D2 ... 3 épocas" (o más) y "Listo.". La primera vez tarda
+    1 a 3 minutos.
+  - Servidor: `uvicorn app.main:app --reload` y abrir
+    http://127.0.0.1:8000/epocas?ra=269.4521&dec=4.6934&det=D2 (lista de épocas) y
+    http://127.0.0.1:8000/frames?ra=269.4521&dec=4.6934&det=D2 (JSON con PNG).
+  - Página: en frontend `npm run dev` y abrir http://localhost:5173/?api=http://127.0.0.1:8000
+    -> Barnard's Star con la línea de tiempo de épocas abajo y el botón Play.
+  - Sin IRSA: con `$env:USAR_MOCK="1"` antes de uvicorn, la página muestra 3 épocas falsas
+    con una estrella que sube.
+
 
 ### 2026-11-14 21:00 — Jesús — ramas: ciencia/T21-png, datos/T11-descargas, datos/T12-epocas, datos/T13-cache
 - Hecho: PR #3 (T10) y PR #4 (T40, interfaz del equipo) unidos a main. Después, cuatro tareas,
