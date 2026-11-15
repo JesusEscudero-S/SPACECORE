@@ -4,6 +4,41 @@ Bitácora compartida para que cualquier integrante (y su Claude Code) pueda cont
 de otro. Claude Code la lee al empezar y la actualiza al terminar cada sesión.
 Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
+## PENDIENTES PARA LA ENTREGA (lista vigente, 2026-11-15 18:15)
+
+El despliegue está terminado y probado: página https://spacecore.vercel.app y backend
+https://spacecore-api-1042355798883.us-east4.run.app. Lo que falta es del equipo. Trabajen en
+una rama y abran Pull Request hacia main (cada cambio en main republica la página sola).
+
+Obligatorio para entregar:
+1. T68 - Revisar en la página de la sede qué se entrega, en qué idioma y la hora límite. Hacer
+   esto PRIMERO: define el resto.
+2. T74 - README completo, EN INGLÉS (o bilingüe) si la evaluación global es en inglés: qué es,
+   captura o GIF, enlace a la demo, cómo correrlo, arquitectura, datos de la NASA usados
+   (SPHEREx vía IRSA, Gaia, AllWISE), créditos, herramientas de IA usadas (Claude Code y Codex)
+   y equipo. Agregar una línea: "docs/PROGRESO.md, CLAUDE.md and docs/plan are internal working
+   notes in Spanish". NO borrar ni traducir esos documentos internos.
+3. T65 y T75 - Guion del pitch, diapositivas y ensayo.
+4. T67 - Video demo. Usar los 5 objetivos con campo de visión de 6' (cargan al instante).
+5. T26 - Capturas de los 5 objetivos en docs/capturas/ (ya está la de Barnard's Star).
+
+Mejoras si sobra tiempo (el MVP funciona sin ellas):
+6. Precalcular otros campos de visión: hoy solo 6' sale de la caché; con otro valor hasta los 5
+   objetivos van a IRSA (lento, y a veces error 504). Tras precalcular hay que volver a
+   desplegar el backend (ver "PUBLICADO").
+7. Estrellas muy brillantes (R Draconis en D6, Vega) se ven como un disco blanco. Para la demo,
+   abrir R Draconis en otro detector.
+8. WISE 0855: en Comparar > Diferencia con D6 solo se vio ruido. Revisar otros detectores o
+   pares de épocas antes de mostrarlo.
+9. T15 - Banderas de calidad por época (la página dice "Sin banderas").
+10. T46 - Pulido: sección "¿Cómo se usa?", créditos visibles, favicon.
+11. Quitar el servicio PostGIS de docker-compose.yml (nadie lo usa).
+12. Sin probar: exportar PNG y CSV, copiar enlace, un celular real y otros navegadores.
+
+Al terminar la evaluación (Jesús):
+13. Apagar la instancia fija de Cloud Run, que cobra mientras esté encendida:
+    `gcloud run services update spacecore-api --region us-east4 --min-instances 0`
+
 ## Estado actual (actualizar en cada relevo)
 
 | Campo | Valor |
