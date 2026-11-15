@@ -93,6 +93,11 @@ spacecore/
 
 ## Roles y carpetas (no modifiques carpetas de otro rol sin que te lo pida)
 
+> **Cambio de reparto (2026-11-14):** Jesús, con Claude Code, desarrolla todo el código del
+> proyecto (las tareas de los roles #1 a #6). El resto del equipo prepara el pitch (T65 y T75).
+> Si trabajas con Jesús, puedes modificar cualquier carpeta. La tabla de abajo se conserva como
+> referencia de qué carpeta corresponde a cada parte del proyecto y de los prefijos de ramas.
+
 | Rol | Qué hace | Carpetas | Prefijo de ramas |
 |---|---|---|---|
 | #1 Frontend - interfaz | Layout, buscador, URL, cliente de la API | frontend/src/components/busqueda, frontend/src/api, App.tsx | front-ui/ |

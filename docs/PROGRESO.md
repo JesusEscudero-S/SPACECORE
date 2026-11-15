@@ -8,21 +8,30 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-14 15:50 |
-| Última persona que trabajó | Jesús (rol #6) |
-| Rama activa | infra/T60-docker (incluye también el commit de bitácora de infra/T03-cierre) |
-| Tarea en curso | T60 Dockerfile del backend: probado en local, falta unir el PR a main |
-| Punto exacto donde quedó | La imagen planetx-api se construye y el contenedor responde /health. Rama subida a GitHub, sin unir todavía. T03 sigue esperando a que los 4 compañeros acepten la invitación y abran un PR de prueba. |
-| Siguiente paso concreto | Abrir y unir el PR de infra/T60-docker. Después T61 (primer deploy a Cloud Run) y T02 (aprobar el contrato) cuando el equipo tenga conexión. |
-| ¿El código actual funciona? | Sí: backend (/health) y frontend en local, y el backend dentro de Docker. |
+| Última actualización | 2026-11-14 19:10 |
+| Última persona que trabajó | Jesús |
+| Rama activa | api/T02-contrato |
+| Tarea en curso | T02 Contrato de la API: versión 1 escrita en docs/api.md, falta que Jesús la apruebe y unir el PR |
+| Punto exacto donde quedó | docs/api.md tiene todos los endpoints con parámetros, ejemplos y errores. Falta revisarlo contra el diseño de interfaz que están preparando los compañeros. |
+| Siguiente paso concreto | Aprobar el contrato y unir el PR. Después T10 (consulta a IRSA) y T20/T21 (abrir un recorte y convertirlo a PNG). |
+| ¿El código actual funciona? | Sí: backend (/health) y frontend en local, y el backend dentro de Docker. T02 solo cambia documentos. |
 
 ## Tareas terminadas (unidas a main)
 
-- T03 (parte del rol #6): estructura inicial en main, repo en GitHub, main protegida y equipo
-  invitado. Queda completa cuando todos hayan clonado y probado crear una rama y un PR.
+- T03: estructura inicial en main, repo en GitHub, main protegida y los 5 compañeros con acceso
+  (ya clonaron el repo, según confirmó Jesús el 2026-11-14).
+- T60: Dockerfile del backend probado en local (PR #1, unido a main el 2026-11-14).
 
 ## Decisiones tomadas
 
+- NUEVO REPARTO (2026-11-14): Jesús, con Claude Code, desarrolla TODO el código del proyecto
+  (las tareas de los roles #1 a #6). El resto del equipo prepara el pitch (T65 y T75). La regla
+  de "no tocar carpetas de otro rol" ya no aplica para Jesús.
+- El orden de trabajo es en línea recta hacia el MVP: datos reales (T10, T20, T21, T11, T12,
+  T13), API (T30, T32, T33, T22, T23, T34), página (T40, T41, T42, T50, T43, T52) y publicar
+  (T61, T62, T63). T31 (mock) queda fuera por ahora: servía para trabajar en paralelo.
+- Contrato de la API versión 1 en docs/api.md. Respecto a la propuesta de CLAUDE.md agrega
+  `meta.ra`, `meta.dec` y `meta.tamano_px` en /frames y `unidad_flujo` en /spectrum.
 - Nombre del proyecto y del repositorio: SPACECORE / spacecore.
 - Caché definitiva: PENDIENTE de decidir (bucket u otra opción). Por ahora, caché en disco.
 - Colección de datos de SPHEREx: PENDIENTE de confirmar en la documentación de IRSA
@@ -65,6 +74,18 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-14 19:10 — Jesús — rama: api/T02-contrato
+- Hecho: PR #1 (T60) unido a main y ramas infra/T60-docker e infra/T03-cierre borradas. T03 se
+  da por terminada. Cambio de reparto: Jesús y Claude hacen todo el código. T02: contrato
+  versión 1 escrito en docs/api.md (parámetros, ejemplos, errores y tipos TypeScript).
+- A medias (y dónde quedó): T02 espera la aprobación de Jesús y el PR. Los compañeros están
+  preparando un diseño de interfaz; cuando llegue hay que revisar si el contrato le alcanza.
+- Siguiente paso: unir el PR de T02 y empezar T10.
+- Decisiones: ver "Decisiones tomadas" (nuevo reparto, orden de trabajo y campos agregados al
+  contrato).
+- Problemas: la red siguió intermitente (un `git pull` falló por no poder conectar a GitHub).
+- Cómo probar: T02 solo cambia documentos; abrir docs/api.md y leerlo.
 
 ### 2026-11-14 15:50 — Jesús — rama: infra/T60-docker
 - Hecho: T60. `docker build -t planetx-api backend` termina bien (unos 5 min con buena red) y
