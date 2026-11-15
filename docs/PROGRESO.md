@@ -8,13 +8,13 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-14 20:05 |
+| Última actualización | 2026-11-14 21:00 |
 | Última persona que trabajó | Jesús |
-| Rama activa | datos/T10-buscar-imagenes |
-| Tarea en curso | T10 buscar_imagenes: hecha y probada con datos reales; falta unir el PR |
-| Punto exacto donde quedó | backend/app/datos/irsa.py devuelve las imágenes de SPHEREx de un punto usando el servicio SIA de IRSA. Probado con los 5 objetivos. |
-| Siguiente paso concreto | Unir el PR de T10. Después T20 y T21 (abrir un recorte y convertirlo a PNG) y T11 (descargas en paralelo). |
-| ¿El código actual funciona? | Sí: `python -m app.datos.irsa` (desde backend) devuelve 62 imágenes de Barnard's Star. |
+| Rama activa | datos/T13-cache (hay 4 ramas con PR: T21, T11, T12 y T13; no chocan entre sí) |
+| Tarea en curso | Bloque T21 + T11 + T12 + T13 terminado; falta unir sus PR |
+| Punto exacto donde quedó | Ya existen las piezas sueltas del backend: buscar imágenes (irsa.py), descargarlas (descargas.py), agruparlas por época (epocas.py), convertirlas a PNG (ciencia/imagen.py) y guardarlas (cache.py). Falta unirlas en los endpoints. |
+| Siguiente paso concreto | Unir los 4 PR. Después T23 (reproyectar para dejar el norte arriba) y T22 (sumar las imágenes de cada época), y luego los endpoints T32, T33 y T34. |
+| ¿El código actual funciona? | Sí: `python -m unittest discover -v` desde backend pasa (29 pruebas con las 4 ramas unidas). El frontend funciona en modo demostración. |
 
 ## Tareas terminadas (unidas a main)
 
@@ -22,8 +22,27 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   (ya clonaron el repo, según confirmó Jesús el 2026-11-14).
 - T60: Dockerfile del backend probado en local (PR #1, unido a main el 2026-11-14).
 - T02: contrato de la API versión 1 en docs/api.md (PR #2, unido a main el 2026-11-14).
+- T10: buscar_imagenes con el servicio SIA de IRSA (PR #3, unido a main el 2026-11-14).
+- T40: interfaz del equipo en frontend/, TypeScript + Vite sin React (PR #4, unido a main el
+  2026-11-14). Funciona en modo demostración; adelanta T41, T43, T44, T50, T51, T53, T54 y
+  T55, que se dan por terminadas cuando funcionen con datos reales.
 
 ## Decisiones tomadas
+
+- FRONTEND SIN REACT (2026-11-14): se adoptó la interfaz que preparó el equipo (TypeScript +
+  Vite, archivos .ts). Su `frontend/src/api/cliente.ts` habla el contrato de docs/api.md y sin
+  backend funciona en modo demostración con datos simulados. La carpeta `interfaz-propuesta/`
+  de la raíz es la copia original que entregó el equipo: no está en git y es redundante.
+- Contrato versión 1.1: `/frames` y `/diff` mandan el PNG a ESCALA REAL (un píxel del PNG = un
+  píxel de SPHEREx, 6.15 arcsec), no a 256 px fijos. Se agregó `meta.escala_arcsec_px`.
+- La interfaz calcula la diferencia y la suma en el navegador a partir de los PNG, así que
+  `/diff` (T24 y T35) pierde prioridad.
+- Los recortes se descargan SIN la tabla EPSF (se corta la descarga antes): 124 KB en vez de
+  3.9 MB. Para el espectro (T25) hay que pedir el archivo completo (`completo=True`).
+- `a_png` usa `ManualInterval` + `AsinhStretch` de Astropy, no `ImageNormalize`, porque esta
+  última exige matplotlib, que no está en la lista de librerías.
+- Pruebas del backend con `unittest` (incluido en Python), en backend/tests/. No se agregó
+  pytest.
 
 - NUEVO REPARTO (2026-11-14): Jesús, con Claude Code, desarrolla TODO el código del proyecto
   (las tareas de los roles #1 a #6). El resto del equipo prepara el pitch (T65 y T75). La regla
@@ -56,6 +75,14 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   frontend para probarlos. No afecta al proyecto.
 
 ## Problemas conocidos
+
+- IRSA ESTUVO MUY INESTABLE el 2026-11-14 por la noche: el servicio SIA respondió "502 Proxy
+  Error" en la mayoría de los intentos, a ratos en todos. `buscar_imagenes` reintenta 3 veces.
+  Para la demo es indispensable precalcular los 5 objetivos y servirlos desde la caché (T16).
+- El recorte de IRSA no queda centrado exacto en el punto pedido (en la prueba, a ~13 arcsec) y
+  viene girado (WCS TAN-SIP). Hasta que exista T23 las imágenes no tienen el norte arriba.
+- La interfaz, en modo API, hace 6 llamadas a `/epocas` (una por detector) al buscar. Como SIA
+  devuelve los 6 detectores en una sola consulta, conviene guardar esa consulta en la caché.
 
 - Cada recorte de SPHEREx pesa ~3.9 MB aunque la imagen sea pequeña (53 x 59 píxeles para
   fov = 0.1), porque trae la tabla EPSF completa. Barnard's Star tiene 62 imágenes en D2: son
@@ -90,6 +117,25 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-14 21:00 — Jesús — ramas: ciencia/T21-png, datos/T11-descargas, datos/T12-epocas, datos/T13-cache
+- Hecho: PR #3 (T10) y PR #4 (T40, interfaz del equipo) unidos a main. Después, cuatro tareas,
+  cada una en su rama con su PR:
+  - T21: backend/app/ciencia/imagen.py (`limites_brillo`, `a_png`, `a_data_url`) y contrato
+    1.1 a escala real. PNG real de muestra en notebooks/salidas/barnard_D2.png.
+  - T11: backend/app/datos/descargas.py (`descargar_recortes`, `cortar_antes_de_tabla`,
+    `abrir_recorte`) y reintentos en `buscar_imagenes`.
+  - T12: backend/app/datos/epocas.py (`agrupar_por_epoca`, `separar_por_detector`).
+  - T13: backend/app/datos/cache.py (`crear_clave`, `get`, `set`, `get_bytes`, `set_bytes`) y
+    la variable CACHE_DIR.
+- A medias (y dónde quedó): los 4 PR están abiertos. T20 (notebook) no se hizo como notebook:
+  la exploración del recorte se hizo con scripts y quedó anotada en CLAUDE.md.
+- Siguiente paso: T23 y T22, luego los endpoints T32, T33 y T34, y conectar la interfaz (T52).
+- Decisiones: ver "Decisiones tomadas" (sin React, contrato 1.1, recortes sin EPSF, unittest).
+- Problemas: IRSA con errores 502 muy frecuentes (ver "Problemas conocidos").
+- Cómo probar: desde backend, `python -m unittest discover -v` (termina en OK);
+  `python -m app.ciencia.imagen` genera el PNG de muestra; `python -m app.datos.descargas`
+  descarga los recortes de Barnard's Star y mide el tiempo. Desde frontend, `npm run dev`.
 
 ### 2026-11-14 20:05 — Jesús — rama: datos/T10-buscar-imagenes
 - Hecho: PR #2 (T02) unido a main y su rama borrada. T10: `buscar_imagenes(ra, dec,
