@@ -51,8 +51,12 @@ objetos que se mueven (enanas marrones, estrellas cercanas, asteroides) o que ca
 
 ## Tecnologías (decididas por el equipo; no agregues otras sin preguntar)
 
-- Frontend: TypeScript, React, Vite, Node.js + npm, HTML5 Canvas, estado en la URL
-  (URLSearchParams), Aladin Lite v3 (`aladin-lite`), Plotly.js (`plotly.js-dist-min`).
+- Frontend: TypeScript, Vite, Node.js + npm, HTML5 Canvas, estado en la URL
+  (URLSearchParams), Aladin Lite v3 (`aladin-lite`), Plotly.js (`plotly.js-basic-dist-min`).
+  **Sin React** desde el 2026-11-14: se adoptó la interfaz que preparó el equipo, hecha en
+  TypeScript plano (archivos `.ts`, no `.tsx`). Ver `frontend/README.md`.
+- Pruebas del backend: `unittest` (viene con Python), en `backend/tests/`. Se corren desde
+  `backend` con `python -m unittest discover -v`. No usamos pytest ni matplotlib.
 - Backend: Python 3.13, FastAPI + Uvicorn, Astropy, Astroquery, PyVO, NumPy, Pillow, reproject,
   httpx + asyncio, fsspec/s3fs, Jupyter para experimentar.
 - Infraestructura: Docker, Google Cloud Run, Vercel. GitHub para el código.
@@ -185,7 +189,11 @@ Coordenadas en grados decimales ICRS. `fov` en grados. `det` = D1..D6. Errores s
   (`Irsa.query_sia` con las colecciones `spherex_dr1` y `spherex_qr3`) porque la consulta TAP
   de arriba tardaba más de 6 minutos y daba error 502, mientras SIA responde en 1 a 3 s; (2) el
   píxel mide 6.15 arcsec; (3) la imagen viene en MJy/sr; (4) la extensión de PSF se llama EPSF;
-  (5) cada recorte pesa ~3.9 MB por la tabla EPSF.
+  (5) cada recorte pesa ~3.9 MB por la tabla EPSF, así que `descargar_recortes` corta la
+  descarga antes de esa tabla y quedan ~125 KB con IMAGE, FLAGS, VARIANCE y ZODI (WCS-WAVE va
+  después de EPSF: para el espectro hay que bajar el archivo completo); (6) el WCS de cada
+  recorte es TAN-SIP y viene girado: hay que reproyectar para dejar el norte arriba; (7) IRSA
+  responde "502 Proxy Error" con frecuencia: siempre reintentar y usar la caché.
 - VERIFICA contra la documentación oficial antes de fijar en código: tamaño de píxel de SPHEREx
   (~6.2 arcsec), nombre de la colección vigente, tabla de Gaia DR3 en VizieR (I/355/gaiadr3) y
   la API de Aladin Lite. Si no puedes verificar algo, dilo.

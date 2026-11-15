@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Variable de entorno: USAR_MOCK
     usar_mock: bool = False
 
+    # Carpeta donde se guarda la caché en disco (ignorada por git).
+    # Variable de entorno: CACHE_DIR
+    cache_dir: str = "cache"
+
     @property
     def lista_colecciones_spherex(self) -> list[str]:
         """Convierte "a,b" en ["a", "b"]."""
