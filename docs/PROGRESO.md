@@ -8,13 +8,13 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
 
 | Campo | Valor |
 |---|---|
-| Última actualización | 2026-11-15 02:15 |
+| Última actualización | 2026-11-15 03:40 |
 | Última persona que trabajó | David (con Claude) |
-| Rama activa | docker (1 commit encima de main; el segundo, con el despliegue, está en preparación) |
-| Tarea en curso | T60/T14/T16 listos en Docker; preparación de T61/T62 (falta ejecutar el despliegue, requiere las cuentas de Google Cloud y Vercel) |
-| Punto exacto donde quedó | Todo el sistema corre con `docker compose up -d --build` (Redis + backend + frontend). Los 5 objetivos x 6 detectores están precalculados en backend/cache. La guía de despliegue está en infra/despliegue.md; nadie la ha ejecutado todavía. |
-| Siguiente paso concreto | 1) Unir la rama `docker` a main (PR). 2) Seguir infra/despliegue.md con las cuentas de Jesús. 3) /spectrum (T36). |
-| ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 02:00, computadora de David): 60 pruebas OK; los 5 objetivos cargan en 1 a 2 s desde la caché; cambiar de detector también. |
+| Rama activa | docker (subida a GitHub; 3 commits encima de main con el de esta sesión) |
+| Tarea en curso | T36 /spectrum terminado con datos reales. Despliegue (T61/T62/T63) en espera de las cuentas de Jesús. |
+| Punto exacto donde quedó | Todo corre con `docker compose up -d --build`. Los 5 objetivos (6 detectores + espectro) están precalculados en backend/cache. La pestaña Espectro ya se ve y carga sola al cambiar de objetivo. |
+| Siguiente paso concreto | 1) README (T74). 2) Desplegar con infra/despliegue.md (cuentas de Jesús). 3) Unir la rama `docker` a main (PR). |
+| ¿El código actual funciona? | SÍ, CON DATOS REALES, en Docker (2026-11-15 03:30, computadora de David): 71 pruebas OK; /frames y /spectrum de los 5 objetivos responden en ~30 ms desde la caché. |
 
 ## Tareas terminadas (unidas a main)
 
@@ -31,6 +31,18 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   T55, que se dan por terminadas cuando funcionen con datos reales.
 
 ## Decisiones tomadas
+
+- (2026-11-15 03:00, David) /spectrum (T36): un punto por imagen (cada píxel de SPHEREx ve otra
+  longitud de onda). La tabla WCS-WAVE es IDÉNTICA en todos los recortes de un detector y
+  versión de proceso (verificado con datos reales); solo cambia CRPIX1W/2W en la cabecera. Por
+  eso se baja una vez por detector y de cada imagen solo un recorte de 0.035° (~80 KB). Se
+  guardan las "estampillas" (IMAGE + VARIANCE) en la caché y la fotometría se calcula al vuelo:
+  cambiar la apertura o el anillo no descarga nada. Máximo 40 imágenes por detector. Flujo en
+  mJy (BUNIT MJy/sr × área del píxel). La apertura sigue el movimiento propio (pmra, pmdec,
+  epoca). Fotometría de apertura simple, sin corrección por PSF.
+- (2026-11-15 03:30, David) "Excluir píxeles marcados" queda APAGADO por defecto: en Barnard
+  (D1–D4) y R Draconis (todo) el centro satura y con el filtro no se ve casi nada. Los puntos
+  saturados se dibujan como círculos huecos (flujo por debajo del real).
 
 - (2026-11-15 madrugada, David) DOCKER PARA TODO EL EQUIPO: `docker-compose.yml` en la raíz
   levanta Redis, backend (puerto 8000, con --reload) y frontend (5173) con un solo comando.
@@ -186,6 +198,21 @@ Las entradas nuevas van ARRIBA en el historial. No borres entradas anteriores.
   de prueba como respaldo.
 
 ## Historial de sesiones (la más reciente arriba)
+
+### 2026-11-15 03:40 — David (con Claude) — rama: docker
+- T36 /spectrum: backend (app/ciencia/espectro.py, servicio.espectro, router con apertura,
+  anillo, fondo y movimiento propio), contrato actualizado en docs/api.md, 11 pruebas nuevas
+  (tests/test_espectro.py, 71 en total), modo mock con espectro falso.
+- Frontend: la pestaña Espectro nunca se mostraba (nadie quitaba `hidden` de #viewSpec): lo
+  arregla Espectro.ts. El cliente manda apertura/anillo/pm y usa fecha, época, error y
+  píxeles saturados; el espectro se recalcula solo al cambiar de objetivo.
+- precalcular.py: ahora también prepara el espectro, verifica que cada resultado SÍ quedó en
+  la caché y reintenta hasta 3 veces (antes decía OK aunque IRSA hubiera fallado, y esos
+  detectores tardaban ~20 s cada vez que se abría la página).
+- Resultados reales: Barnard ~4–6 Jy (D1–D4 saturado), Eps Indi B 3–53 mJy, WISE 0855 en el
+  nivel del ruido (esperado: es muy débil), RW Aur sube de 0.2 a 2 Jy hacia el infrarrojo,
+  R Draconis 4–16 Jy y todo saturado.
+- Pendiente: README (T74); despliegue (cuentas de Jesús); PR de `docker` a main.
 
 ### 2026-11-15 02:15 — David (con Claude) — rama: docker
 - Contexto: trabajé en paralelo con Juan sin saberlo (misma lista de tareas). Mi versión del

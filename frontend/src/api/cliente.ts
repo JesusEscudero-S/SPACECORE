@@ -2,13 +2,17 @@
 //   GET /resolve?name   GET /epocas?ra&dec&fov&det   GET /frames?ra&dec&fov&det   GET /spectrum?ra&dec
 // Si el contrato cambia, este es el ÚNICO archivo que hay que tocar.
 import { DET, detector } from '../config';
+import { currentDecimalYear, propagarProperMotion } from '../lib/coords';
 import type { DetectorId, Frame, FrameSource, Observation, PhotometryOptions, SkyPosition, SpectrumPoint, Target } from './source';
 
 interface RespuestaResolve { name: string; ra: number; dec: number }
 interface Epoca { id: string; inicio: string; fin?: string; n_imagenes?: number }
 interface FrameApi { epoca: string; fecha: string; png: string }
 interface RespuestaFrames { frames: FrameApi[] }
-interface PuntoEspectro { lambda_um: number; flujo: number }
+interface PuntoEspectro {
+  lambda_um: number; flujo: number; error?: number | null; fecha?: string; mjd?: number;
+  detector?: DetectorId; epoca?: string; n_malos?: number;
+}
 
 const TIEMPO_LIMITE_MS = 180_000;
 
@@ -137,12 +141,30 @@ export class ClienteApi implements FrameSource {
     return await pngAFrame(png, observation, center);
   }
 
-  // api.md solo define lambda y flujo; las opciones de fotometría de la interfaz no se envían.
-  async spectrum(center: SkyPosition, _coleccion: string, _opciones: PhotometryOptions, _objetivo: Target | null): Promise<SpectrumPoint[]> {
-    const d = await this.pedir<{ puntos: PuntoEspectro[] }>('/spectrum', { ra: center.ra, dec: center.dec });
-    return (d.puntos ?? []).map((p, i) => ({
-      obs_id: `S${i + 1}`, date: '', mjd: 0, detector: detectorDeLambda(p.lambda_um),
-      lambda_um: p.lambda_um, flux_mjy: p.flujo, err_mjy: 0, nbad: 0,
-    }));
+  // Un punto por imagen de SPHEREx. La apertura y el anillo de la interfaz se envían en arcsec.
+  // Si el centro es el objetivo, se manda su movimiento propio: el backend mueve la apertura a
+  // donde estaba la estrella en la fecha de cada imagen (el centro está al 1 de enero, ver App.ts).
+  async spectrum(center: SkyPosition, _coleccion: string, opciones: PhotometryOptions, objetivo: Target | null): Promise<SpectrumPoint[]> {
+    const params: Record<string, string | number> = {
+      ra: center.ra, dec: center.dec, apertura: opciones.ap, anillo_in: opciones.annIn, anillo_out: opciones.annOut,
+      fondo: String(opciones.subBg),
+    };
+    if (objetivo && (objetivo.pmra || objetivo.pmdec)) {
+      const epoca = Math.floor(currentDecimalYear());
+      const p = propagarProperMotion({ ra: objetivo.ra, dec: objetivo.dec, pmRA: objetivo.pmra, pmDec: objetivo.pmdec }, epoca);
+      const distanciaArcsec = Math.hypot((p.ra - center.ra) * Math.cos((center.dec * Math.PI) / 180), p.dec - center.dec) * 3600;
+      if (distanciaArcsec < 10) Object.assign(params, { pmra: objetivo.pmra, pmdec: objetivo.pmdec, epoca });
+    }
+    const d = await this.pedir<{ puntos: PuntoEspectro[] }>('/spectrum', params);
+    return (d.puntos ?? [])
+      // "Excluir píxeles marcados": quita los puntos con píxeles sin dato (centro saturado) en la apertura.
+      .filter((p) => !(opciones.exclMask && (p.n_malos ?? 0) > 0))
+      .map((p, i) => {
+        const det = p.detector ?? detectorDeLambda(p.lambda_um);
+        return {
+          obs_id: p.epoca ? `${det}:${p.epoca}` : `S${i + 1}`, date: (p.fecha ?? '').slice(0, 10), mjd: p.mjd ?? 0,
+          detector: det, lambda_um: p.lambda_um, flux_mjy: p.flujo, err_mjy: p.error ?? 0, nbad: p.n_malos ?? 0,
+        };
+      });
   }
 }

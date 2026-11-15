@@ -37,3 +37,20 @@ def pila(lista: list[dict], fov: float) -> np.ndarray:
         imagen += 5 * np.exp(-((x - cx) ** 2 + (y - cy) ** 2) / (2 * 1.2**2))
         imagenes.append(imagen)
     return np.stack(imagenes)
+
+
+def espectro() -> dict:
+    """Espectro falso: una curva suave (como una estrella fría) con 20 puntos por detector."""
+    generador = np.random.default_rng(7)
+    rangos = {"D1": (0.75, 1.09), "D2": (1.10, 1.62), "D3": (1.63, 2.41),
+              "D4": (2.42, 3.82), "D5": (3.83, 4.41), "D6": (4.42, 5.00)}
+    puntos = []
+    for det, (minimo, maximo) in rangos.items():
+        for lam in np.linspace(minimo, maximo, 20):
+            flujo = 5000 * lam ** -1.5 * (1 + generador.normal(0, 0.03))
+            puntos.append({
+                "lambda_um": round(float(lam), 4), "ancho_um": round(float(lam) / 40, 4),
+                "flujo": float(flujo), "error": float(flujo * 0.03), "fecha": "2025-08-21T00:00:00Z",
+                "mjd": 60908.0, "detector": det, "epoca": "E1", "n_malos": 0,
+            })
+    return {"puntos": puntos, "unidad_flujo": "mJy", "meta": {"simulado": True}}

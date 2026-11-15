@@ -1,4 +1,4 @@
-"""Endpoints del contrato (docs/api.md): /resolve, /epocas, /frames y /diff.
+"""Endpoints del contrato (docs/api.md): /resolve, /epocas, /frames, /diff y /spectrum.
 
 Aquí solo se leen y validan los parámetros; el trabajo lo hace app/servicio.py.
 FastAPI corre estas funciones (definidas con `def`, no `async def`) en hilos aparte, así una
@@ -52,3 +52,19 @@ def diff(
 ):
     """Entrega la imagen de diferencia (época b menos época a)."""
     return servicio.diferencia(ra, dec, fov, det, a, b)
+
+
+@router.get("/spectrum")
+def spectrum(
+    ra: Ra,
+    dec: Dec,
+    apertura: Annotated[float, Query(gt=0, le=60, description="Radio de la apertura en arcsec")] = 18.0,
+    anillo_in: Annotated[float, Query(gt=0, le=60, description="Radio interior del anillo de fondo (arcsec)")] = 30.0,
+    anillo_out: Annotated[float, Query(gt=0, le=60, description="Radio exterior del anillo de fondo (arcsec)")] = 50.0,
+    fondo: Annotated[bool, Query(description="Restar el fondo del anillo")] = True,
+    pmra: Annotated[float, Query(description="Movimiento propio en RA·cos(Dec), mas/año")] = 0.0,
+    pmdec: Annotated[float, Query(description="Movimiento propio en Dec, mas/año")] = 0.0,
+    epoca: Annotated[float | None, Query(ge=2000, le=2100, description="Año decimal de ra/dec (para el movimiento propio)")] = None,
+):
+    """Entrega el espectro del punto: brillo contra longitud de onda, un punto por imagen."""
+    return servicio.espectro(ra, dec, apertura, anillo_in, anillo_out, fondo, pmra, pmdec, epoca)

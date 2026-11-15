@@ -45,7 +45,7 @@ const initialState: AppState = {
   center: defaultCenter, target: initialTarget, observations: [], currentIndex: 0, frame: null,
   frameA: null, frameB: null, slider: 0.5, loading: true, error: '',
   display: { stretch: 'asinh', smooth: true, commonScale: true, subtractBackground: true, grid: true, marker: true, showMask: false },
-  spectrum: { aperture: 18, annulusInner: 30, annulusOuter: 50, subtractBackground: true, showError: true, excludeMask: true, colorEpoch: true, logarithmic: true, points: [] },
+  spectrum: { aperture: 18, annulusInner: 30, annulusOuter: 50, subtractBackground: true, showError: true, excludeMask: false, colorEpoch: true, logarithmic: true, points: [] },
   selectedSource: null, gaiaEnabled: false,
 };
 
@@ -153,12 +153,15 @@ const actions: ViewActions = {
   togglePlayback() { store.setState({ playing: !store.getState().playing }); },
   async computeSpectrum() {
     const state = store.getState();
+    const pedido = spectrumOptionsKey(state);
     store.setState({ error: '' });
     try {
       const points = await source.spectrum(state.selectedSource ?? state.center, state.collection, {
         ap: state.spectrum.aperture, annIn: state.spectrum.annulusInner, annOut: state.spectrum.annulusOuter,
         subBg: state.spectrum.subtractBackground, exclMask: state.spectrum.excludeMask,
       }, state.target);
+      // Si mientras tanto cambió el objetivo o las opciones, esta respuesta ya es vieja.
+      if (spectrumOptionsKey(store.getState()) !== pedido) return;
       store.setState({ spectrum: { ...store.getState().spectrum, points } });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -245,10 +248,14 @@ function subscribeToState(): void {
       if (state.view === 'compare') void loadCompareFrames(loadSequence);
     } else if (changed.has('view') && state.view === 'compare') void loadCompareFrames(loadSequence);
     if (changed.has('collection') || changed.has('center') || changed.has('fovArcmin')) frameCache.clear();
-    if (changed.has('spectrum')) {
-      const currentOptions = spectrumOptionsKey(state);
-      if (currentOptions !== lastSpectrumOptions && state.view === 'spectrum') void actions.computeSpectrum();
+    // El espectro depende del objetivo, del centro y de las opciones de extracción. Si algo de
+    // eso cambia: en la pestaña Espectro se recalcula al momento; fuera de ella se borran los
+    // puntos viejos para que se recalcule al entrar (antes había que presionar "Recalcular").
+    const currentOptions = spectrumOptionsKey(state);
+    if (currentOptions !== lastSpectrumOptions) {
       lastSpectrumOptions = currentOptions;
+      if (state.view === 'spectrum') void actions.computeSpectrum();
+      else if (state.spectrum.points.length) store.setState({ spectrum: { ...state.spectrum, points: [] } });
     }
   });
 }

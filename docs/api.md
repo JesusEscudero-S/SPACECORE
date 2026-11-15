@@ -217,34 +217,48 @@ existe; 422 por parámetros inválidos; 504 si IRSA no responde.
 
 ## GET /spectrum
 
-Entrega el espectro de un punto: cuánto brilla en cada longitud de onda del infrarrojo.
+Entrega el espectro de un punto: cuánto brilla en cada longitud de onda del infrarrojo. Cada
+imagen de SPHEREx que cubre el punto da **un** punto del espectro (cada píxel del detector ve una
+longitud de onda distinta), medido con fotometría de apertura.
 
 | Parámetro | Tipo | Descripción |
 |---|---|---|
 | `ra`, `dec` | - | Ver "Parámetros comunes". |
+| `apertura` | número, opcional | Radio de la apertura en arcsec. Por defecto 18. |
+| `anillo_in`, `anillo_out` | número, opcional | Radios del anillo de fondo en arcsec. Por defecto 30 y 50. Máximo 60. |
+| `fondo` | `true`/`false`, opcional | Restar el fondo (mediana del anillo). Por defecto `true`. |
+| `pmra`, `pmdec` | número, opcional | Movimiento propio en mas/año (`pmra` ya multiplicado por cos(Dec), como SIMBAD). |
+| `epoca` | número, opcional | Año decimal al que corresponden `ra` y `dec` (la página usa el 1 de enero del año en curso). Con `pmra`/`pmdec`, la apertura se coloca donde estaba la estrella en la fecha de cada imagen. |
 
-Ejemplo: `GET /spectrum?ra=269.4521&dec=4.6934`
+Ejemplo: `GET /spectrum?ra=269.4463&dec=4.7680&pmra=-798.6&pmdec=10328.1&epoca=2026`
 
 ```json
 {
   "puntos": [
-    {"lambda_um": 0.82, "flujo": 15.3},
-    {"lambda_um": 1.47, "flujo": 22.8},
-    {"lambda_um": 4.21, "flujo": 9.6}
+    {"lambda_um": 1.1012, "ancho_um": 0.0253, "flujo": 4503.5, "error": 3.1,
+     "fecha": "2025-08-21T23:33:58Z", "mjd": 60908.98, "detector": "D2", "epoca": "E1", "n_malos": 3}
   ],
-  "unidad_flujo": "<unidad que indica el archivo de SPHEREx>"
+  "unidad_flujo": "mJy",
+  "meta": {"ra": 269.4463, "dec": 4.768, "apertura_arcsec": 18, "anillo_arcsec": [30, 50],
+           "restar_fondo": true, "n_imagenes": 240}
 }
 ```
 
-- `lambda_um`: longitud de onda en micras (entre 0.75 y 5).
-- `puntos`: ordenados de menor a mayor longitud de onda.
-- `unidad_flujo`: texto con la unidad del flujo. El backend lo copia del propio archivo de
-  SPHEREx, así no queda escrito a mano en el código. Se agregó en esta versión respecto a la
-  propuesta inicial.
-- Los valores del ejemplo son inventados, solo muestran el formato.
+- `puntos`: ordenados de menor a mayor `lambda_um` (entre 0.75 y 5).
+- `ancho_um`: ancho de banda en ese píxel. `error`: incertidumbre (de la extensión VARIANCE); puede ser `null`.
+- `epoca`: la misma época ("E1"...) que devuelve `/epocas` para ese detector.
+- `n_malos`: píxeles sin dato dentro de la apertura. En estrellas muy brillantes el centro satura y
+  SPHEREx lo deja sin dato: si `n_malos > 0` el flujo queda **por debajo** del real.
+- `unidad_flujo`: el backend verifica que la imagen venga en MJy/sr (cabecera `BUNIT`) y convierte
+  con el área del píxel a mJy.
+- Es fotometría de apertura simple, sin corrección por la PSF: sirve para ver la forma del
+  espectro, no es una medición calibrada al 1 %.
+- Se usan como máximo 40 imágenes por detector (repartidas en el tiempo). La primera vez tarda
+  varios minutos (baja un recorte de ~80 KB por imagen); después sale de la caché y cambiar la
+  apertura o el anillo es instantáneo.
 
-Errores: 404 si no hay imágenes en ese punto; 422 por parámetros inválidos; 504 si IRSA no
-responde.
+Errores: 400 si no se cumple 0 < apertura < anillo_in < anillo_out ≤ 60; 404 si no hay imágenes
+en ese punto; 422 por parámetros inválidos; 504 si IRSA no responde.
 
 ---
 
@@ -305,12 +319,20 @@ export interface RespuestaDiff {
 
 export interface PuntoEspectro {
   lambda_um: number
+  ancho_um: number
   flujo: number
+  error: number | null
+  fecha: string
+  mjd: number
+  detector: Detector
+  epoca: string
+  n_malos: number
 }
 
 export interface RespuestaSpectrum {
   puntos: PuntoEspectro[]
   unidad_flujo: string
+  meta: Record<string, unknown>
 }
 ```
 
