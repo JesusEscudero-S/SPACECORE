@@ -1,1 +1,10 @@
-
+/* Modo para insertar (?embed=1): la página va dentro de un <iframe> de otro sitio, así que se
+   muestran solo el visor y la reproducción. Se ocultan los paneles laterales y los botones que
+   no tienen sentido ahí (exportar, abrir paneles). App.ts pone la clase "embed" en <body>. */
+body.embed .rail,
+body.embed .hide-embed,
+body.embed .railtoggle { display: none !important; }
+body.embed .app {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "top" "stage" "dock" "status";
+}

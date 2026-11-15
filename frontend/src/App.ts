@@ -1,8 +1,8 @@
-import { API_BASE, COLLECTION, DET, EPOCA_CENTRADO, channelWidth, detector } from './config';
+import { API_BASE, COLLECTION, DET, EPOCA_CENTRADO, FOV_MAX_ARCMIN, channelWidth, detector } from './config';
 import { ClienteApi } from './api/cliente';
 import { DemoSource } from './api/demoSource';
 import type { FrameSource, Observation, SkyPosition, Target, ViewName } from './api/source';
-import { posicionEspectro, propagarProperMotion } from './lib/coords';
+import { parseDec, parseRA, posicionEspectro, propagarProperMotion } from './lib/coords';
 import { download, showMessage, verifyElements } from './lib/dom';
 import { applyI18n } from './lib/i18n';
 import { localResolve, TARGETS } from './lib/objects';
@@ -66,6 +66,15 @@ const actions: ViewActions = {
       else store.setState({ error: store.getState().lang === 'es' ? 'Coordenadas fuera de rango.' : 'Coordinates out of range.' });
       return;
     }
+    // Coordenadas en horas y grados: "08h55m10.831s -07d14m42.53s" o "08:55:10.8 -07:14:42.5".
+    const sexagesimal = value.match(/^(\d{1,2}\s*[h:]\s*\d{1,2}\s*[m:]\s*\d{1,2}(?:[.,]\d+)?\s*s?)[\s,;]+([+-]?\d{1,2}\s*[d°:]\s*\d{1,2}\s*[m'′:]\s*\d{1,2}(?:[.,]\d+)?\s*[s"″]?)$/iu);
+    if (sexagesimal) {
+      try {
+        const ra = parseRA(sexagesimal[1].replace(/\s+/gu, ''), 'h'), dec = parseDec(sexagesimal[2].replace(/\s+/gu, ''));
+        this.applyCoordinates({ ra, dec }, store.getState().fovArcmin, store.getState().fovInput);
+      } catch (error) { store.setState({ error: error instanceof Error ? error.message : String(error) }); }
+      return;
+    }
     store.setState({ loading: true, error: '' });
     try {
       const target = TARGETS.find((entry) => entry.key === value) ?? localResolve(value) ?? await source.resolve(value);
@@ -96,18 +105,20 @@ const actions: ViewActions = {
   applyCoordinates(position, fovArcmin, originalFov) {
     store.setState({
       center: position, target: null, query: '', selectedSource: position,
-      fovArcmin: Math.min(40, Math.max(1.5, fovArcmin)), fovInput: originalFov, error: '',
+      fovArcmin: Math.min(FOV_MAX_ARCMIN, Math.max(1.5, fovArcmin)), fovInput: originalFov, error: '',
     });
     void this.refresh();
   },
   changeFov(deltaFactor) {
-    const next = Math.min(40, Math.max(1.5, store.getState().fovArcmin * deltaFactor));
+    const next = Math.min(FOV_MAX_ARCMIN, Math.max(1.5, store.getState().fovArcmin * deltaFactor));
     store.setState({ fovArcmin: next, fovInput: next.toFixed(1) });
     void this.refresh();
   },
   async refresh() {
     const state = store.getState();
     const sequence = ++loadSequence;
+    // Empieza una búsqueda nueva: se quita cualquier aviso anterior (de error o de validación).
+    const aviso = document.getElementById('banner'); if (aviso) aviso.hidden = true;
     store.setState({ loading: true, error: '', frame: null, frameA: null, frameB: null });
     try {
       allObservations = await source.epocas(state.center, state.fovArcmin, state.collection, state.target);
@@ -288,8 +299,8 @@ async function boot(): Promise<void> {
   }
   if (source instanceof ClienteApi && !(await source.salud())) {
     store.setState({ error: store.getState().lang === 'es'
-      ? `El backend (${initialState.api}) no responde a /health. Revisa que uvicorn esté corriendo.`
-      : `The backend (${initialState.api}) does not answer /health. Check that uvicorn is running.` });
+      ? 'El servidor de datos no respondió. Espera unos segundos y recarga la página.'
+      : 'The data server did not respond. Wait a few seconds and reload the page.' });
   }
   await actions.refresh();
   if (initialState.view === 'spectrum') await actions.computeSpectrum();

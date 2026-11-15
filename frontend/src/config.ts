@@ -9,6 +9,9 @@ export const PIX_ARCSEC = 6.15;
 // Fecha FIJA (año decimal) en la que se centran los objetivos con movimiento propio.
 // Debe ser IGUAL a EPOCA_CENTRADO de backend/scripts/precalcular.py (ver App.ts).
 export const EPOCA_CENTRADO = 2026;
+// Campo de visión máximo en minutos de arco. Debe coincidir con FOV_MAX del backend
+// (0.5 grados = 30 arcmin): si la página dejara pedir más, el backend lo rechazaría.
+export const FOV_MAX_ARCMIN = 30;
 export const CHANNELS_PER_DETECTOR = 17;
 export const COLLECTIONS = [COLLECTION, 'spherex_qr3'] as const;
 export const EXPLANATORY_SUPPLEMENT = 'https://irsa.ipac.caltech.edu/data/SPHEREx/docs/SPHEREx_Expsupp_QR.pdf';
